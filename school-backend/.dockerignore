@@ -1,0 +1,36 @@
+# dependencies
+node_modules
+**/node_modules
+
+# logs
+*.log
+npm-debug.log
+
+# env files (VERY IMPORTANT)
+.env
+.env.*
+!.env.example
+
+# git
+.git
+.gitignore
+
+# OS / editor
+.DS_Store
+.vscode
+.idea
+
+# docker
+docker-compose.yml
+
+# tests (optional)
+coverage
+
+
+# **/node_modules
+# npm-debug.log
+# .git
+# .env.local
+# .env.*.local
+# *.log
+# .DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "school-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "School management system: four Node.js microservices behind an **nginx API gateway**, sharing a common library (`shared/`), backed by MySQL (one database per service), Redis (refresh tokens + access-token blacklist), and JWT auth — all orchestrated with docker-compose.",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "up": "docker compose up -d --build",
+    "down": "docker compose down",
+    "down:clean": "docker compose down -v",
+    "logs": "docker compose logs -f",
+    "ps": "docker compose ps",
+    "restart": "docker compose restart",
+    "rebuild": "docker compose build --no-cache"
+  }
+}

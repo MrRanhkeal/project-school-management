@@ -1,0 +1,14 @@
+{
+  "name": "records-service",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": { "start": "node src/index.js", "dev": "node --watch src/index.js" },
+  "dependencies": {
+    "@school/shared": "file:../../shared",
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5",
+    "sequelize": "^6.37.3",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
+  }
+}

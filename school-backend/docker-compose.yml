@@ -1,0 +1,161 @@
+x-service-base: &service-base
+  restart: unless-stopped
+  env_file: .env
+  networks: [school-net]
+
+x-db-base: &db-base
+  image: mysql:8.0
+  restart: unless-stopped
+  command: >
+    --default-authentication-plugin=mysql_native_password
+    --max_connections=300
+  networks: [school-net]
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+    start_period: 30s
+
+services:
+  # database
+  auth-db:
+    <<: *db-base
+    # container_name: auth-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${AUTH_DB_NAME}
+      MYSQL_USER: ${AUTH_DB_USER}
+      MYSQL_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth-db-data:/var/lib/mysql
+    ports: ["5306:3306"]
+
+  academic-db:
+    <<: *db-base
+    # container_name: acadenic-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${ACADEMIC_DB_NAME}
+      MYSQL_USER: ${ACADEMIC_DB_USER}
+      MYSQL_PASSWORD: ${ACADEMIC_DB_PASSWORD}
+    volumes:
+      - academic-db-data:/var/lib/mysql
+    ports: ["5307:3306"]
+
+  records-db:
+    <<: *db-base
+    container_name: records-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${RECORDS_DB_NAME}
+      MYSQL_USER: ${RECORDS_DB_USER}
+      MYSQL_PASSWORD: ${RECORDS_DB_PASSWORD}
+    volumes:
+      - records-db-data:/var/lib/mysql
+    ports: ["5308:3306"]
+
+
+  # redis cache + bullQM
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-data:/data
+    ports: ["6379:6379"]
+    networks: [school-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # application service
+  auth-service:
+    <<: *service-base
+    # container_name: auth-service
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      SERVICE_NAME: auth-service
+      PORT: ${AUTH_SERVICE_PORT}
+      DB_HOST: auth-db
+      DB_NAME: ${AUTH_DB_NAME}
+      DB_PORT: 3306
+      DB_USER: ${AUTH_DB_USER}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      REDIS_HOST: redis
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  academic-service:
+      <<: *service-base
+      # container_name: academic-service
+      build:
+        context: .
+        dockerfile: services/academic-service/Dockerfile
+      environment:
+        SERVICE_NAME: academic-service
+        PORT: ${ACADEMIC_SERVICE_PORT}
+        DB_HOST: academic-db
+        DB_NAME: ${ACADEMIC_DB_NAME}
+        DB_PORT: 3306
+        DB_USER: ${ACADEMIC_DB_USER}
+        DB_PASSWORD: ${ACADEMIC_DB_PASSWORD}
+        REDIS_HOST: redis
+      depends_on:
+        academic-db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+
+  records-service:
+      <<: *service-base
+      build:
+        context: .
+        dockerfile: services/records-service/Dockerfile
+      environment:
+        SERVICE_NAME: records-service
+        PORT: ${RECORDS_SERVICE_PORT}
+        DB_HOST: records-db
+        DB_NAME: ${RECORDS_DB_NAME}
+        DB_PORT: 3306
+        DB_USER: ${RECORDS_DB_USER}
+        DB_PASSWORD: ${RECORDS_DB_PASSWORD}
+        REDIS_HOST: redis
+      depends_on:
+        records-db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+  # nginx gateway
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: school-gateway
+    restart: unless-stopped
+    ports:
+      # host port on this machine Apache 
+      - "8080:80"
+    networks: [school-net]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - academic-service
+      - records-service
+
+networks:
+  school-net:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  academic-db-data:
+  records-db-data:
+  redis-data:
