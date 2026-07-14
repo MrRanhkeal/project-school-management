@@ -26,13 +26,23 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 exports.refresh = asyncHandler(async (req, res) => {
-    const tokens = await authService.refresh(req.body);
-    ok(res, tokens);
+    try{
+        const tokens = await authService.refresh(req.body);
+        ok(res, tokens);
+    }catch(err){
+        logErr('auth.refresh',err,res);
+        throw err;
+    }
 });
 
 exports.logout = asyncHandler(async (req, res) => {
-    await authService.logout(req.body);
-    ok(res, { message: 'Logged out' });
+    try{
+        await authService.logout(req.body);
+        ok(res, { message: 'Logged out' });
+    }catch(err){
+        logErr('auth.logout',err,res);
+        throw err;
+    }
 });
 
 exports.userList = asyncHandler(async (req, res) => {

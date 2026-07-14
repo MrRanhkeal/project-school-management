@@ -44,6 +44,18 @@ export default function Teacher() {
         { name: 'firstName', label: 'First name', required: true, half: true },
         { name: 'lastName', label: 'Last name', required: true, half: true },
         { name: 'email', label: 'Email', type: 'email', half: true },
+        {
+          name: 'password',
+          label: 'Teacher password',
+          type: 'password',
+          half: true,
+          createOnly: true,
+          validate: (v, all) => {
+            if (v && v.length < 8) return 'At least 8 characters';
+            if (v && !all.email) return 'Email is required to create the account';
+            return '';
+          },
+        },
         { name: 'phone', label: 'Phone', half: true },
         { name: 'department', label: 'Department', half: true },
         { name: 'specialization', label: 'Specialization', half: true },

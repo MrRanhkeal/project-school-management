@@ -2,6 +2,7 @@
 
 module.exports = {
   ...require('./auth'),
+  ...require('./internalAuth'),
   errorHandler: require('./error'),
   notFound: require('./notFound'),
   requestLogger: require('./requestLogger'),

@@ -6,8 +6,8 @@ const Grade = sequilize.define(
     `Grade`,
     {
         id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-        studentId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-        courseId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
+        studentId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false }, //reference to academic_db.students, by ID only
+        courseId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false }, //reference to academic_db.courses, by ID only
         classId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
         term: { type: DataTypes.STRING(20), allowNull: false }, // e.g. "2025-T1", "Semester 1"
         assessment: { type: DataTypes.STRING(80), allowNull: true }, // "Midterm", "Final", "Quiz 1"

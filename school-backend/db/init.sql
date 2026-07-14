@@ -25,30 +25,53 @@ USE auth_db;
 -- sequelize.sync() on boot, including FK constraints between them.
 CREATE DATABASE IF NOT EXISTS academic_db;
 
--- ---------- records-service ----------
-CREATE DATABASE IF NOT EXISTS records_db;
-USE records_db;
+-- ---------- record-service ----------
+-- Tables (grades, attendance) are owned by the service's Sequelize models
+-- (services/record-service/src/models) and created via sequelize.sync().
+CREATE DATABASE IF NOT EXISTS record_db;
 
-    CREATE TABLE grades (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id INT NOT NULL,           -- reference to academic_db.students, by ID only
-        course_id INT NOT NULL,            -- reference to academic_db.courses, by ID only
-        score DECIMAL(5,2),
-        grade VARCHAR(5),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_grades_student (student_id),
-        INDEX idx_grades_course (course_id),
-        UNIQUE KEY uq_grade (student_id, course_id)
-    );
+-- NOTE: teachers.user_id / students.user_id reference auth_db.users.id, but
+-- auth_db lives on a DIFFERENT MySQL server (auth-db container), so a real
+-- FOREIGN KEY is impossible. The link is enforced at the application level:
+-- academic-service calls auth-service's internal API
+-- (POST /api/auth/internal/users/resolve) to find-or-create the user and
+-- stores the returned id, and joins user info on reads via
+-- GET /api/auth/internal/users?ids=...
 
-    CREATE TABLE attendance (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id INT NOT NULL,           -- by ID only
-        classroom_id INT NOT NULL,         -- by ID only
-        date DATE NOT NULL,
-        status ENUM('present', 'absent', 'late') NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_att_student (student_id),
-        UNIQUE KEY uq_attendance (student_id, classroom_id, date)
-    );
+-- NOTE: record_db.grades / record_db.attendance would have these FKs if the
+-- tables lived on the same server as academic_db:
+--   grades:     FOREIGN KEY (student_id) REFERENCES academic_db.students(id)
+--               FOREIGN KEY (course_id)  REFERENCES academic_db.courses(id)
+--               FOREIGN KEY (class_id)   REFERENCES academic_db.classes(id)
+--   attendance: FOREIGN KEY (student_id) REFERENCES academic_db.students(id)
+--               FOREIGN KEY (course_id)  REFERENCES academic_db.courses(id)
+--               FOREIGN KEY (class_id)   REFERENCES academic_db.classes(id)
+-- Since record-db is a separate MySQL server, the relationship is bound at
+-- the application level instead: record-service calls academic-service's
+-- internal API (POST /api/academic/internal/refs/verify) before every write
+-- to reject unknown ids like a FK violation would, and joins names on reads
+-- via GET /api/academic/internal/students|courses|classes?ids=...
+
+
+
+-- ---------- payment-service ----------
+-- The payments table is owned by the service's Sequelize model
+-- (services/payment-service/src/models/payment.model.js) and created via
+-- sequelize.sync() on boot, including the studentId index.
+CREATE DATABASE IF NOT EXISTS payment_db;
+
+-- NOTE: payment_db.payments.studentId references academic_db.students(id),
+-- i.e. the association that would exist on a single server:
+--   Students.hasMany(Payment,  { foreignKey: 'studentId', as: 'payments' });
+--   Payment.belongsTo(Students, { foreignKey: 'studentId', as: 'student' });
+-- Since payment-db is a separate MySQL server, a real FOREIGN KEY (and a
+-- cross-service Sequelize association) is impossible. The relationship is
+-- bound at the application level instead:
+--   - payment-service calls academic-service's internal API
+--     (POST /api/academic/internal/refs/verify) before every payment write
+--     to reject unknown studentIds like a FK violation would, and joins the
+--     `student` object on reads via GET /api/academic/internal/students?ids=...
+--   - academic-service joins each student's `payments` array via
+--     GET /api/payments/internal/by-student?ids=... and refuses to delete a
+--     student who still has payments (onDelete: RESTRICT equivalent).
 

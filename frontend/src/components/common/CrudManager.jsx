@@ -21,7 +21,8 @@ import DataTable from './DataTable';
  *
  * endpoint:   ENDPOINTS group, e.g. ENDPOINTS.students ({ list, create, update(id), delete(id) })
  * columns:    DataTable columns
- * formFields: [{ name, label, type, options, required, validate?(value), half? }]
+ * formFields: [{ name, label, type, options, required, validate?(value), half?, createOnly? }]
+ *             createOnly fields are shown (and validated) only when adding a new row.
  * filters:    [{ name, label, type: 'select', options }] rendered above the table
  * writeRoles / deleteRoles: roles allowed to create+edit / delete
  */
@@ -97,9 +98,12 @@ export default function CrudManager({
     setErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev));
   };
 
+  // Hide createOnly fields (e.g. initial password) when editing an existing row.
+  const visibleFields = editing?.id ? formFields.filter((f) => !f.createOnly) : formFields;
+
   const validateForm = () => {
     const next = {};
-    for (const f of formFields) {
+    for (const f of visibleFields) {
       const v = values[f.name];
       if (f.required && (v === '' || v === undefined || v === null)) {
         next[f.name] = t('common.required', 'This field is required');
@@ -254,7 +258,7 @@ export default function CrudManager({
             gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
           }}
         >
-          {formFields.map((f) => (
+          {visibleFields.map((f) => (
             <Box key={f.name} sx={{ gridColumn: f.half ? 'auto' : { xs: 'auto', sm: '1 / -1' } }}>
               <Input
                 name={f.name}

@@ -3,16 +3,28 @@
 const { Op } = require('sequelize');
 const { queue } = require('@school/shared');
 const Attendance = require('../models/attendance.model');
+const academic = require('../clients/academic.client');
 
-// Producer handle. Worker (attendance-worker) consumes from the same queue.
+// Producer handle. Worker (attendance.worker) consumes from the same queue.
 const attendanceQueue = queue.createQueue('attendance');
 
 /**
  * Enqueue a batch of attendance records instead of writing inline. Returns
  * immediately so the teacher's UI is snappy even when submitting a full roll;
  * the worker persists durably and fans out absence notifications.
+ *
+ * References are verified against academic_db BEFORE enqueueing (one batched
+ * round trip for the whole roll), so a bad studentId/classId is rejected
+ * synchronously — the FK-equivalent across the service boundary — and the
+ * worker never has to handle referential failures.
  */
 async function mark({ date, records }, markedBy) {
+    await academic.verifyRefs({
+        studentIds: records.map((r) => r.studentId),
+        courseIds: records.map((r) => r.courseId).filter(Boolean),
+        classIds: records.map((r) => r.classId).filter(Boolean),
+    });
+
     const job = await attendanceQueue.add(
         'mark-batch',
         { date, records, markedBy },
@@ -51,8 +63,23 @@ async function list(query) {
         offset: (page - 1) * limit,
         order: [['date', 'DESC'], ['student_id', 'ASC']],
     });
+
+    // Application-level join with academic_db (students / classes / courses).
+    let items = rows.map((r) => r.toJSON());
+    const [students, classes, courses] = await Promise.all([
+        academic.getStudentsByIds(items.map((a) => a.studentId)),
+        academic.getClassesByIds(items.map((a) => a.classId)),
+        academic.getCoursesByIds(items.map((a) => a.courseId)),
+    ]);
+    items = items.map((a) => ({
+        ...a,
+        student: students[a.studentId] || null,
+        class: classes[a.classId] || null,
+        course: courses[a.courseId] || null,
+    }));
+
     return {
-        items: rows.map((r) => r.toJSON()),
+        items,
         total: count,
         page,
         limit,

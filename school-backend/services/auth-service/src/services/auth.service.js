@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { config, ApiError, redis, logger, paginate, pageMeta } = require('@school/shared');
 const User = require('../models/user.model');
+const academicClient = require('../clients/academic.client');
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
 
@@ -63,11 +64,30 @@ async function register({ email, password, fullName, role }) {
         fullName,
         role: role || 'student'
     });
+
+    // Bind the domain profile: students/teachers get a row in academic_db
+    // linked back to this user via userId. Roll the account back if the
+    // profile cannot be created so the two DBs never drift apart.
+    let profile = null;
+    if (user.role === 'student' || user.role === 'teacher') {
+        try {
+            profile = await academicClient.resolveProfile({
+                userId: Number(user.id),
+                email,
+                fullName,
+                role: user.role,
+            });
+        } catch (err) {
+            await user.destroy();
+            throw err;
+        }
+    }
+
     logger.info('User registered', {
         userId: String(user.id),
         role: user.role
     });
-    return publicUser(user);
+    return { ...publicUser(user), profile };
 }
 
 async function login({ email, password }) {
@@ -87,6 +107,7 @@ async function login({ email, password }) {
         signRefreshToken(user),
     ]);
     return { user: publicUser(user), accessToken, refreshToken };
+    
 }
 
 async function refresh({ refreshToken }) {

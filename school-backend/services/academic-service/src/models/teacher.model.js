@@ -5,7 +5,7 @@ const Teachers = sequelize.define(
     'Teachers',
     {
         id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-        userId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true }, // reference to auth_db.users, by ID only
+        userId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true }, 
         teacherCode: { type: DataTypes.STRING(20), allowNull: false, unique: true },
         firstName: { type: DataTypes.STRING(60), allowNull: false },
         lastName: { type: DataTypes.STRING(60), allowNull: false },

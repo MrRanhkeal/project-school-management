@@ -23,13 +23,23 @@ export default function AuthForm({ mode = 'login' }) {
   const [serverError, setServerError] = useState('');
 
   const { values, errors, handleChange, validate } = useForm(
-    { email: '', password: '', fullName: '', role: ROLES.STUDENT },
+    {
+      email: '',
+      password: '',
+      fullName: '',
+      confirmPassword: '',
+      // role: ROLES.STUDENT
+    },
     {
       email: compose(required(), email()),
       password: compose(required(), ...(isRegister ? [minLength(8)] : [])),
-      ...(isRegister ? { fullName: compose(required(), minLength(2)) } : {}),
+      ...(isRegister ? {
+        fullName: compose(required(), minLength(2)) ,
+
+      } : {}),
     }
   );
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,17 +118,20 @@ export default function AuthForm({ mode = 'login' }) {
           error={Boolean(errors.password)}
           helperText={errors.password}
           autoComplete={isRegister ? 'new-password' : 'current-password'}
+
         />
-        {isRegister && (
-          <Input
-            name="role"
-            type="select"
-            label={t('auth.role')}
-            value={values.role}
-            onChange={handleChange}
-            options={[ROLES.STUDENT, ROLES.TEACHER, ROLES.STAFF, ROLES.ADMIN]}
-          />
-        )}
+        {/* {isRegister &&
+          (
+            <Input
+              name="role"
+              type="select"
+              label={t('auth.role')}
+              value={values.role}
+              onChange={handleChange}
+              options={[ROLES.STUDENT, ROLES.TEACHER, ROLES.STAFF, ROLES.ADMIN]}
+            />
+          )
+        } */}
 
         <Button type="submit" fullWidth size="large" loading={submitting} sx={{ mt: 2 }}>
           {isRegister ? t('auth.register') : t('auth.login')}

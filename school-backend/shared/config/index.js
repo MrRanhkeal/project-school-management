@@ -32,6 +32,18 @@ const config = {
     },
   },
 
+  // Service-to-service (internal) communication
+  services: {
+    // URL other services use to reach auth-service on the docker network
+    authUrl: process.env.AUTH_SERVICE_URL || 'http://auth-service:4001',
+    // URL other services use to reach academic-service on the docker network
+    academicUrl: process.env.ACADEMIC_SERVICE_URL || 'http://academic-service:4002',
+    // URL other services use to reach payment-service on the docker network
+    paymentUrl: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:4004',
+    // Shared secret sent as `x-internal-token` on internal endpoints
+    internalToken: process.env.INTERNAL_SERVICE_TOKEN || 'dev_internal_token',
+  },
+
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: toInt(process.env.REDIS_PORT, 6379),

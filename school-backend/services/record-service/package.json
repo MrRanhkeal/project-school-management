@@ -1,5 +1,5 @@
 {
-  "name": "records-service",
+  "name": "record-service",
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": { "start": "node src/index.js", "dev": "node --watch src/index.js" },

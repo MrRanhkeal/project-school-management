@@ -5,16 +5,21 @@ const service = require('../service/student.service');
 const logErr = require('@school/shared/middleware/logErr');
 
 exports.list = asyncHandler(async (req, res) => {
-    const result = await service.list(req.query);
-    const { items, ...meta } = result;
-    ok(res, items, meta);
+    try{
+        const result = await service.list(req.query);
+        const { items, ...meta } = result;
+        ok(res, items, meta);
+    }catch(err){
+        logErr('academic.student',err,res);
+        throw err;
+    }
 });
 
 exports.get = asyncHandler(async (req, res) => {
     try {
         ok(res, await service.getById(req.params.id));
     } catch (err) {
-        await logErr('student.get', err, req);
+        logErr('academic.student.get', err, res);
         throw err; // let errorHandler send the proper status
     }
 });
@@ -23,7 +28,7 @@ exports.create = asyncHandler(async (req, res) => {
     try {
         ok(res, await service.create(req.body), undefined, 201);
     } catch (err) {
-        await logErr('student.create', err, req);
+        logErr('academic.student.create', err, req);
         throw err;
     }
 });
@@ -32,7 +37,7 @@ exports.update = asyncHandler(async (req, res) => {
     try {
         ok(res, await service.update(req.params.id, req.body));
     } catch (err) {
-        await logErr('student.update', err, req);
+        logErr('academic.student.update', err, req);
         throw err;
     }
 });
@@ -42,7 +47,7 @@ exports.remove = asyncHandler(async (req, res) => {
         await service.remove(req.params.id);
         ok(res, { message: 'Student deleted' });
     } catch (err) {
-        await logErr('student.remove', err, req);
+        logErr('academic.student.remove', err, req);
         throw err;
     }
 });

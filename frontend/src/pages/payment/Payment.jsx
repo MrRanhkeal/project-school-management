@@ -16,24 +16,42 @@ import AddIcon from '@mui/icons-material/Add';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import useFetch from '../../hooks/useFetch';
+import useOptions, { optionLabel } from '../../hooks/useOptions';
 import api, { unwrap } from '../../services/api';
 import { ENDPOINTS } from '../../services/endpoints';
-import { formatDateTime, getApiError } from '../../utils/helpers';
+import { formatDateTime, fullName, getApiError } from '../../utils/helpers';
 
 const STATUS_COLORS = { completed: 'success', pending: 'warning', expired: 'error' };
 const POLL_MS = 4000;
 
-const EMPTY_FORM = { amount: '', currency: 'USD', description: '' };
+const EMPTY_FORM = { studentId: '', amount: '', currency: 'USD', description: '' };
 
 export default function Payment() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+
+  // Every payment belongs to a student (payments.studentId -> students.id).
+  const studentOptions = useOptions(
+    ENDPOINTS.students.list,
+    (s) => `${s.studentCode} — ${fullName(s)}`
+  );
+
+  // ?studentId=… filters the list to one student's payments; the Students
+  // page links here with it set.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const studentFilter = searchParams.get('studentId') || '';
+  const setStudentFilter = (value) => {
+    setPage(1);
+    setSearchParams(value ? { studentId: value } : {}, { replace: true });
+  };
+
   const { data, meta, loading, error, refetch } = useFetch(ENDPOINTS.payments.list, {
-    params: { page, limit },
+    params: { page, limit, studentId: studentFilter || undefined },
   });
 
   // Create-payment form
@@ -55,6 +73,10 @@ export default function Payment() {
 
   const handleCreate = async () => {
     const amount = Number(form.amount);
+    if (!form.studentId) {
+      setFormError('Select the student this payment is for');
+      return;
+    }
     if (!amount || amount <= 0) {
       setFormError('Amount must be a positive number');
       return;
@@ -67,6 +89,7 @@ export default function Payment() {
     setFormError('');
     try {
       const res = await api.post(ENDPOINTS.payments.create, {
+        studentId: Number(form.studentId),
         amount,
         currency: form.currency,
         description: form.description || undefined,
@@ -136,10 +159,35 @@ export default function Payment() {
         </Alert>
       )}
 
+      <TextField
+        label="Student"
+        select
+        size="small"
+        sx={{ mb: 2, minWidth: 260 }}
+        value={studentFilter}
+        onChange={(e) => setStudentFilter(e.target.value)}
+      >
+        <MenuItem value="">All students</MenuItem>
+        {studentOptions.map((o) => (
+          <MenuItem key={o.value} value={String(o.value)}>
+            {o.label}
+          </MenuItem>
+        ))}
+      </TextField>
+
       <DataTable
         columns={[
           { id: 'id', label: '#' },
           { id: 'payment_id', label: 'Payment ID' },
+          {
+            id: 'student',
+            label: 'Student',
+            minWidth: 160,
+            render: (r) =>
+              r.student
+                ? `${r.student.fullName} (${r.student.studentCode})`
+                : optionLabel(studentOptions, r.studentId),
+          },
           {
             id: 'amount',
             label: 'Amount',
@@ -205,12 +253,27 @@ export default function Payment() {
       >
         <Stack spacing={2} sx={{ mt: 1 }}>
           {formError && <Alert severity="error">{formError}</Alert>}
+          <TextField
+            label="Student"
+            select
+            required
+            fullWidth
+            autoFocus
+            value={form.studentId}
+            onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
+            helperText="The student this payment belongs to (e.g. course registration fee)"
+          >
+            {studentOptions.map((o) => (
+              <MenuItem key={o.value} value={String(o.value)}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
           <Stack direction="row" spacing={2}>
             <TextField
               label="Amount"
               type="number"
               fullWidth
-              autoFocus
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
             />
@@ -258,6 +321,11 @@ export default function Payment() {
           <Stack spacing={2} alignItems="center" sx={{ py: 1 }}>
             <Typography variant="h6">
               {Number(active.amount).toFixed(2)} {active.currency}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {active.student
+                ? `${active.student.fullName} (${active.student.studentCode})`
+                : optionLabel(studentOptions, active.studentId)}
             </Typography>
 
             <Box

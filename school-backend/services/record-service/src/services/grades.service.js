@@ -2,8 +2,31 @@
 
 const { config, ApiError, redis } = require('@school/shared');
 const Grade = require('../models/grades.model');
+const academic = require('../clients/academic.client');
 
 const reportKey = (studentId, term) => `grade:report:${studentId}:${term || 'all'}`;
+
+/** FK-style check against academic_db for whichever refs the payload carries. */
+async function verifyGradeRefs(data) {
+    await academic.verifyRefs({
+        studentIds: data.studentId ? [data.studentId] : [],
+        courseIds: data.courseId ? [data.courseId] : [],
+        classIds: data.classId ? [data.classId] : [],
+    });
+}
+
+/** Application-level join: attach student + course info from academic-service. */
+async function joinAcademic(items) {
+    const [students, courses] = await Promise.all([
+        academic.getStudentsByIds(items.map((g) => g.studentId)),
+        academic.getCoursesByIds(items.map((g) => g.courseId)),
+    ]);
+    return items.map((g) => ({
+        ...g,
+        student: students[g.studentId] || null,
+        course: courses[g.courseId] || null,
+    }));
+}
 
 async function list(query) {
     const { page = 1, limit = 50, studentId, courseId, term } = query;
@@ -19,7 +42,7 @@ async function list(query) {
         order: [['createdAt', 'DESC']],
     });
     return {
-        items: rows.map((r) => r.toJSON()),
+        items: await joinAcademic(rows.map((r) => r.toJSON())),
         total: count,
         page,
         limit,
@@ -28,6 +51,7 @@ async function list(query) {
 }
 
 async function create(data) {
+    await verifyGradeRefs(data);
     const grade = await Grade.create(data);
     await redis.invalidate(reportKey(data.studentId, '*'));
     return grade.toJSON();
@@ -36,6 +60,7 @@ async function create(data) {
 async function update(id, data) {
     const grade = await Grade.findByPk(id);
     if (!grade) throw ApiError.notFound('Grade not found');
+    await verifyGradeRefs(data);
     await grade.update(data);
     await redis.invalidate(reportKey(grade.studentId, '*'));
     return grade.toJSON();
@@ -71,10 +96,19 @@ async function studentReport(studentId, term) {
             byCourse.set(g.courseId, entry);
         }
 
+        // Join course/student names from academic-service so the report card
+        // is readable without a second round trip from the frontend.
+        const [courseInfo, studentInfo] = await Promise.all([
+            academic.getCoursesByIds([...byCourse.keys()]),
+            academic.getStudentsByIds([studentId]),
+        ]);
+
         const courses = [...byCourse.entries()].map(([courseId, e]) => {
             const percentage = e.weightTotal ? e.weightedSum / e.weightTotal : 0;
             return {
                 courseId,
+                courseCode: courseInfo[courseId]?.code || null,
+                courseTitle: courseInfo[courseId]?.title || null,
                 percentage: Math.round(percentage * 10) / 10,
                 gpaPoints: percentageToGpa(percentage),
                 assessments: e.items,
@@ -86,7 +120,13 @@ async function studentReport(studentId, term) {
                 ? Math.round((courses.reduce((s, c) => s + c.gpaPoints, 0) / courses.length) * 100) / 100
                 : null;
 
-        return { studentId: Number(studentId), term: term || 'all', courses, gpa };
+        return {
+            studentId: Number(studentId),
+            student: studentInfo[studentId] || null,
+            term: term || 'all',
+            courses,
+            gpa,
+        };
     });
 }
 

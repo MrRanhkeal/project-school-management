@@ -8,6 +8,9 @@ const createSchema = z.object({
     firstName: z.string().min(1).max(60),
     lastName: z.string().min(1).max(60),
     email: z.string().email().optional(),
+    // Sets the linked auth account's password on creation (requires email);
+    // never stored in academic_db.
+    password: z.string().min(8).max(72).optional(),
     phone: z.string().max(30).optional(),
     department: z.string().max(80).optional(),
     specialization: z.string().max(120).optional(),

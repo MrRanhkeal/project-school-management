@@ -18,6 +18,7 @@ const createSchema = z.object({
     guardianName: z.string().max(120).optional(),
     guardianPhone: z.string().max(30).optional(),
     email: z.string().email().optional(),
+    password: z.string().min(8).max(72).optional(),
 });
 
 // All fields optional on update.

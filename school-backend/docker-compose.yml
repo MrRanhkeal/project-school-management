@@ -43,19 +43,28 @@ services:
       - academic-db-data:/var/lib/mysql
     ports: ["5307:3306"]
 
-  records-db:
+  record-db:
     <<: *db-base
-    container_name: records-db
+    container_name: record-db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${RECORDS_DB_NAME}
-      MYSQL_USER: ${RECORDS_DB_USER}
-      MYSQL_PASSWORD: ${RECORDS_DB_PASSWORD}
+      MYSQL_DATABASE: ${RECORD_DB_NAME}
+      MYSQL_USER: ${RECORD_DB_USER}
+      MYSQL_PASSWORD: ${RECORD_DB_PASSWORD}
     volumes:
-      - records-db-data:/var/lib/mysql
+      - record-db-data:/var/lib/mysql
     ports: ["5308:3306"]
 
-
+  payment-db:
+      <<: *db-base
+      environment:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        MYSQL_DATABASE: ${PAYMENT_DB_NAME}
+        MYSQL_USER: ${PAYMENT_DB_USER}
+        MYSQL_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      volumes:
+        - payment-db-data:/var/lib/mysql 
+      ports: ["5309:3306"]
   # redis cache + bullQM
   redis:
     image: redis:7-alpine
@@ -88,6 +97,9 @@ services:
       DB_USER: ${AUTH_DB_USER}
       DB_PASSWORD: ${AUTH_DB_PASSWORD}
       REDIS_HOST: redis
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      # Cross-service binding to academic-service (profile creation on register)
+      ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
     depends_on:
       auth-db:
         condition: service_healthy
@@ -109,31 +121,70 @@ services:
         DB_USER: ${ACADEMIC_DB_USER}
         DB_PASSWORD: ${ACADEMIC_DB_PASSWORD}
         REDIS_HOST: redis
+        # Cross-service binding to auth-service (userId resolution + user join)
+        AUTH_SERVICE_URL: http://auth-service:${AUTH_SERVICE_PORT}
+        # Cross-service binding to payment-service (student -> payments join)
+        PAYMENT_SERVICE_URL: http://payment-service:${PAYMENT_SERVICE_PORT}
+        INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       depends_on:
         academic-db:
           condition: service_healthy
         redis:
           condition: service_healthy
+        auth-service:
+          condition: service_started
 
-  records-service:
+  record-service:
       <<: *service-base
       build:
         context: .
-        dockerfile: services/records-service/Dockerfile
+        dockerfile: services/record-service/Dockerfile
       environment:
-        SERVICE_NAME: records-service
-        PORT: ${RECORDS_SERVICE_PORT}
-        DB_HOST: records-db
-        DB_NAME: ${RECORDS_DB_NAME}
+        SERVICE_NAME: record-service
+        PORT: ${RECORD_SERVICE_PORT}
+        DB_HOST: record-db
+        DB_NAME: ${RECORD_DB_NAME}
         DB_PORT: 3306
-        DB_USER: ${RECORDS_DB_USER}
-        DB_PASSWORD: ${RECORDS_DB_PASSWORD}
+        DB_USER: ${RECORD_DB_USER}
+        DB_PASSWORD: ${RECORD_DB_PASSWORD}
         REDIS_HOST: redis
+        # Cross-service binding to academic-service (ref verification + joins)
+        ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
+        INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       depends_on:
-        records-db:
+        record-db:
           condition: service_healthy
         redis:
           condition: service_healthy
+        academic-service:
+          condition: service_started
+
+  payment-service:
+    <<: *service-base
+    build:  
+      context: .
+      dockerfile: services/payment-service/Dockerfile
+    environment:
+      SERVICE_NAME: payment-service
+      PORT: ${PAYMENT_SERVICE_PORT}
+      BAKONG_ACCESS_TOKEN: ${BAKONG_ACCESS_TOKEN}
+      DB_HOST: payment-db
+      DB_PORT: 3306
+      DB_NAME: ${PAYMENT_DB_NAME}
+      DB_USER: ${PAYMENT_DB_USER}
+      DB_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      REDIS_HOST: redis
+      # Cross-service binding to academic-service (studentId verification + student join)
+      ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      academic-service:
+        condition: service_started
+        
   # nginx gateway
   nginx:
     image: nginx:1.27-alpine
@@ -148,7 +199,8 @@ services:
     depends_on:
       - auth-service
       - academic-service
-      - records-service
+      - record-service
+      - payment-service
 
 networks:
   school-net:
@@ -157,5 +209,6 @@ networks:
 volumes:
   auth-db-data:
   academic-db-data:
-  records-db-data:
+  record-db-data:
+  payment-db-data:
   redis-data:
