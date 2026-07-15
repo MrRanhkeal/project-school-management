@@ -31,7 +31,7 @@ export default function Footer() {
         </Link>
       </Typography> */}
       <Typography variant="caption" color="text.secondary">
-        Ranh-school-project ·{' '}
+        school-project ·{' '}
         <Link href="https://github.com/MrRanhkeal" target="_blank" rel="noreferrer" underline="hover">
           GitHub
         </Link>

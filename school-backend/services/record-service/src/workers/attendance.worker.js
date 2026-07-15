@@ -2,6 +2,7 @@
 
 const { logger, queue } = require('@school/shared');
 const Attendance = require('../models/attendance.model');
+const notificationClient = require('../clients/notification.client');
 
 /**
  * Consumer for the 'attendance' queue (producer: attendance.service.mark).
@@ -30,6 +31,19 @@ function start() {
             date,
             count: String(rows.length),
         });
+
+        // Fan out absence notifications (fire-and-forget, one batched call).
+        const absences = rows.filter((r) => r.status === 'absent');
+        if (absences.length) {
+            notificationClient.notify(
+                absences.map((r) => ({
+                    type: 'attendance-absence',
+                    studentId: Number(r.studentId),
+                    data: { date, note: r.note || undefined },
+                }))
+            );
+        }
+
         return { written: rows.length };
     });
     return worker;

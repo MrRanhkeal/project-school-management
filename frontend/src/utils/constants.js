@@ -29,8 +29,16 @@ export const DRAWER_WIDTH = 240;
 export const DEFAULT_PAGE_SIZE = 10;
 
 // Used by the dashboard weather + map widgets.
+// export const SCHOOL_LOCATION = {
+//   name: 'Phnom Penh',
+//   lat: 11.5564,
+//   lon: 104.9282,
+// };
+
 export const SCHOOL_LOCATION = {
   name: 'Phnom Penh',
   lat: 11.5564,
-  lon: 104.9282,
+  lng: 104.9282,
 };
+
+export const GEOFENCE_RADIUS = 200; // meters

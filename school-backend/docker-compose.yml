@@ -100,6 +100,8 @@ services:
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       # Cross-service binding to academic-service (profile creation on register)
       ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
+      # Cross-service binding to notification-service (welcome notification)
+      NOTIFICATION_SERVICE_URL: http://notification-service:${NOTIFICATION_SERVICE_PORT}
     depends_on:
       auth-db:
         condition: service_healthy
@@ -125,6 +127,8 @@ services:
         AUTH_SERVICE_URL: http://auth-service:${AUTH_SERVICE_PORT}
         # Cross-service binding to payment-service (student -> payments join)
         PAYMENT_SERVICE_URL: http://payment-service:${PAYMENT_SERVICE_PORT}
+        # Cross-service binding to notification-service (enrollment notification)
+        NOTIFICATION_SERVICE_URL: http://notification-service:${NOTIFICATION_SERVICE_PORT}
         INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       depends_on:
         academic-db:
@@ -150,6 +154,8 @@ services:
         REDIS_HOST: redis
         # Cross-service binding to academic-service (ref verification + joins)
         ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
+        # Cross-service binding to notification-service (absence notifications)
+        NOTIFICATION_SERVICE_URL: http://notification-service:${NOTIFICATION_SERVICE_PORT}
         INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       depends_on:
         record-db:
@@ -176,6 +182,8 @@ services:
       REDIS_HOST: redis
       # Cross-service binding to academic-service (studentId verification + student join)
       ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
+      # Cross-service binding to notification-service (payment receipt notification)
+      NOTIFICATION_SERVICE_URL: http://notification-service:${NOTIFICATION_SERVICE_PORT}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
     depends_on:
       payment-db:
@@ -185,6 +193,24 @@ services:
       academic-service:
         condition: service_started
         
+  notification-service:
+    <<: *service-base
+    build:  
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    environment:
+      SERVICE_NAME: notification-service
+      PORT: ${NOTIFICATION_SERVICE_PORT}
+      REDIS_HOST: redis
+      # Cross-service bindings to auth/academic-service (recipient resolution:
+      # userId -> auth_db email, studentId -> academic_db email)
+      AUTH_SERVICE_URL: http://auth-service:${AUTH_SERVICE_PORT}
+      ACADEMIC_SERVICE_URL: http://academic-service:${ACADEMIC_SERVICE_PORT}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+    depends_on:
+      redis:
+        condition: service_healthy
+
   # nginx gateway
   nginx:
     image: nginx:1.27-alpine
@@ -201,6 +227,7 @@ services:
       - academic-service
       - record-service
       - payment-service
+      - notification-service
 
 networks:
   school-net:

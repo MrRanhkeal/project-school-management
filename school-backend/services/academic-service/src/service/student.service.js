@@ -5,6 +5,7 @@ const { config, ApiError, redis } = require('@school/shared');
 const { Student, SchoolClass, Teacher } = require('../models');
 const authClient = require('../clients/auth.client');
 const paymentClient = require('../clients/payment.client');
+const notificationClient = require('../clients/notification.client');
 
 const CACHE_TTL = config.redis.cacheTtl;
 const idKey = (id) => `student:${id}`;
@@ -134,6 +135,19 @@ async function create(data) {
     const json = student.toJSON();
     // tempPassword is only present when a brand-new account was created.
     if (authUser) json.user = authUser;
+
+    // Fire-and-forget enrollment notification (never blocks the response).
+    notificationClient.notify({
+        type: 'student-enrolled',
+        studentId: Number(student.id),
+        to: student.email || undefined,
+        data: {
+            fullName: `${student.firstName} ${student.lastName}`.trim(),
+            studentCode: student.studentCode,
+            level: student.level,
+        },
+    });
+
     return json;
 }
 

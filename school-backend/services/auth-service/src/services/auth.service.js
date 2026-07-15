@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const { config, ApiError, redis, logger, paginate, pageMeta } = require('@school/shared');
 const User = require('../models/user.model');
 const academicClient = require('../clients/academic.client');
+const notificationClient = require('../clients/notification.client');
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
 
@@ -87,6 +88,15 @@ async function register({ email, password, fullName, role }) {
         userId: String(user.id),
         role: user.role
     });
+
+    // Fire-and-forget welcome notification (never blocks the response).
+    notificationClient.notify({
+        type: 'user-registered',
+        userId: Number(user.id),
+        to: user.email,
+        data: { email: user.email, fullName: user.fullName, role: user.role },
+    });
+
     return { ...publicUser(user), profile };
 }
 

@@ -113,7 +113,7 @@ async function resolveProfile({ userId, email, fullName, role }) {
 async function getStudentsByIds(ids) {
     const rows = await Student.findAll({
         where: { id: { [Op.in]: ids } },
-        attributes: ['id', 'studentCode', 'firstName', 'lastName', 'level', 'classId', 'status'],
+        attributes: ['id', 'studentCode', 'firstName', 'lastName', 'email', 'level', 'classId', 'status'],
         raw: true,
     });
     return rows.map((s) => ({ ...s, fullName: `${s.firstName} ${s.lastName}` }));

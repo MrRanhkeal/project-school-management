@@ -5,6 +5,7 @@ const { ApiError, paginate, pageMeta } = require('@school/shared');
 const { BAKONG } = require('../config/database');
 const Payment = require('../models/payment.model');
 const academic = require('../clients/academic.client');
+const notificationClient = require('../clients/notification.client');
 
 /**
  * Application-level join (Payment.belongsTo(Student, { as: 'student' })
@@ -44,6 +45,17 @@ const _verifyBakongTransaction = async (md5) => {
 };
 
 const _markPaid = async (payment, tx = {}) => {
+    // Fire-and-forget receipt notification (never blocks settlement).
+    notificationClient.notify({
+        type: 'payment-completed',
+        studentId: payment.studentId ? Number(payment.studentId) : undefined,
+        data: {
+            paymentId: payment.payment_id,
+            amount: payment.amount,
+            currency: payment.currency,
+            description: payment.description,
+        },
+    });
     return payment.update({
         paid: 1,
         status: 'completed',

@@ -40,6 +40,10 @@ const config = {
     academicUrl: process.env.ACADEMIC_SERVICE_URL || 'http://academic-service:4002',
     // URL other services use to reach payment-service on the docker network
     paymentUrl: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:4004',
+    // URL other services use to reach record-service on the docker network
+    recordUrl: process.env.RECORD_SERVICE_URL || 'http://record-service:4003',
+    // URL other services use to reach notification-service on the docker network
+    notificationUrl: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:4005',
     // Shared secret sent as `x-internal-token` on internal endpoints
     internalToken: process.env.INTERNAL_SERVICE_TOKEN || 'dev_internal_token',
   },

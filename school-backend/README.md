@@ -8,13 +8,14 @@ School management system: four Node.js microservices behind an **nginx API gatew
                         ┌──────────────────────┐
   client ── :8080 ────► │    nginx gateway     │
                         └──────────┬───────────┘
-        ┌──────────────┬───────────┴──┬──────────────┐
-        ▼              ▼              ▼              ▼
-  auth-service   academic-service  records-service  payment-service
-     :4001            :4002            :4003            :3404
-        │              │                │                │
-     auth_db       academic_db      records_db      payment_db
-        └──────────────┴───── redis ────┴────────────────┘
+        ┌──────────────┬───────────┴──┬──────────────┐─────────────────────┐
+        ▼              ▼              ▼              ▼                     ▼
+  auth-service   academic-service  records-service  payment-service   notification-service
+     :4001            :4002            :4003            :4004             4005
+        │              │                │                │                  │
+     auth_db       academic_db      records_db      payment_db           (BullMQ)──────────────┐
+      |  └──────────────┴───── redis ────┴────────────────┘                                    |
+      ┴─────────────────┴────────────────┴──────────────┴───────────Redis (cache + queues) ────┘
 ```
 
 Services are **not** exposed to the host — only the gateway on port 8080.
@@ -228,3 +229,8 @@ project-school/
     ACADEMIC_SERVICE_URL=http://localhost:5002
   ```
     
+    npm install --omit=dev installs only your production dependencies (dependencies) and skips all development dependencies (devDependencies) listed in your package.json
+
+    #onmac pull redis & nginx
+docker pull redis:7-alpine
+docker pull nginx:1.27-alpine
