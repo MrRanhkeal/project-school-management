@@ -176,3 +176,50 @@ project-school/
 - Give each service its own MySQL user scoped to its database instead of root.
 - Terminate TLS at nginx (add a `listen 443 ssl` block with certificates).
 - Version the shared library (publish to a private registry) once teams split, so a change to `shared/` doesn't force redeploying every service at once.
+
+
+## env
+  -academic-service
+    NODE_ENV=development
+    DB_HOST=localhost
+    DB_PORT=5307
+    DB_NAME=academic_db
+    DB_USER=academic_user
+    DB_PASSWORD=academicpass
+
+    PORT=5002
+
+  -auth-service
+    NODE_ENV=development 
+    DB_HOST=localhost
+    DB_PORT=5306
+    DB_NAME=auth_db
+    DB_USER=auth_user
+    DB_PASSWORD=authpass
+
+    PORT=5001
+  
+  -payment-service
+    NODE_ENV=development
+    DB_HOST=localhost
+    DB_PORT=5309
+    DB_NAME=payment_db
+    DB_USER=payment_user
+    DB_PASSWORD=paymentpass
+    BAKONG_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiZmNiNDBmMWZiZTJlNGM5OSJ9LCJpYXQiOjE3ODM3NjA1NjIsImV4cCI6MTc5MTUzNjU2Mn0.nZj2FyrhWLTwu3L1LgHoRXiXs141k7yGkXVnIg4zmpc
+
+  -record-service
+    NODE_ENV=development 
+    DB_HOST=localhost
+    DB_PORT=5308
+    DB_NAME=record_db
+    DB_USER=record_user
+    DB_PASSWORD=recordpass
+
+    PORT=5003
+
+    # Cross-service binding to academic-service (ref verification + joins).
+    # Local dev: academic-service runs on 5002 (see its .env); in docker this is
+    # overridden to http://academic-service:4002 by docker-compose.yml.
+    ACADEMIC_SERVICE_URL=http://localhost:5002
+    
