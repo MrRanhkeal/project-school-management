@@ -180,6 +180,7 @@ project-school/
 
 ## env
   -academic-service
+  ```
     NODE_ENV=development
     DB_HOST=localhost
     DB_PORT=5307
@@ -188,8 +189,9 @@ project-school/
     DB_PASSWORD=academicpass
 
     PORT=5002
-
+  ```
   -auth-service
+  ```
     NODE_ENV=development 
     DB_HOST=localhost
     DB_PORT=5306
@@ -198,8 +200,9 @@ project-school/
     DB_PASSWORD=authpass
 
     PORT=5001
-  
+  ```
   -payment-service
+  ```
     NODE_ENV=development
     DB_HOST=localhost
     DB_PORT=5309
@@ -207,8 +210,9 @@ project-school/
     DB_USER=payment_user
     DB_PASSWORD=paymentpass
     BAKONG_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiZmNiNDBmMWZiZTJlNGM5OSJ9LCJpYXQiOjE3ODM3NjA1NjIsImV4cCI6MTc5MTUzNjU2Mn0.nZj2FyrhWLTwu3L1LgHoRXiXs141k7yGkXVnIg4zmpc
-
+  ```
   -record-service
+  ```
     NODE_ENV=development 
     DB_HOST=localhost
     DB_PORT=5308
@@ -222,4 +226,5 @@ project-school/
     # Local dev: academic-service runs on 5002 (see its .env); in docker this is
     # overridden to http://academic-service:4002 by docker-compose.yml.
     ACADEMIC_SERVICE_URL=http://localhost:5002
+  ```
     
