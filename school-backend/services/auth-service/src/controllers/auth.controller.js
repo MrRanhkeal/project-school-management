@@ -26,29 +26,29 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 exports.refresh = asyncHandler(async (req, res) => {
-    try{
+    try {
         const tokens = await authService.refresh(req.body);
         ok(res, tokens);
-    }catch(err){
-        logErr('auth.refresh',err,res);
+    } catch (err) {
+        logErr('auth.refresh', err, res);
         throw err;
     }
 });
 
 exports.logout = asyncHandler(async (req, res) => {
-    try{
+    try {
         await authService.logout(req.body);
         ok(res, { message: 'Logged out' });
-    }catch(err){
-        logErr('auth.logout',err,res);
+    } catch (err) {
+        logErr('auth.logout', err, res);
         throw err;
     }
 });
 
 exports.userList = asyncHandler(async (req, res) => {
     try {
-        const { users, meta } = await authService.userList(req.query);
-        ok(res, users, meta);
+        const result = await authService.userList(req.query);
+        ok(res, result.users, result.meta);
     }
     catch (err) {
         await logErr('auth.userList', err, req);
@@ -66,4 +66,50 @@ exports.me = asyncHandler(async (req, res) => {
         throw err;
     }
 });
+// exports.updateUser == asyncHandler(async (req, res,next) => {
+//     try {
+//         const user = await userService.updateUser(
+//             req.params.id,
+//             req.body
+//         );
 
+//         res.json({
+//             success: true,
+//             data: user,
+//         });
+//     } catch (err) {
+//         next(err);
+//     }
+// });
+exports.updateUser = asyncHandler(async (req, res) => {
+    try {
+        const user = await authService.updateUser(req.params.id, req.body);
+        ok(res, user);
+    }
+    catch (err) {
+        await logErr('auth.updateUser', err, req);
+        throw err;
+    }
+});
+
+exports.deleteUser = asyncHandler(async (req, res) => {
+    try {
+        const result = await authService.deleteUser(req.params.id);
+        ok(res, result);
+    }
+    catch (err) {
+        await logErr('auth.deleteUser', err, req);
+        throw err;
+    }
+});
+
+exports.createUser = asyncHandler(async (req, res) => {
+    try {
+        const user = await authService.createUser(req.body);
+        ok(res, user, undefined, 201);
+    }
+    catch (err) {
+        await logErr('auth.createUser', err, req);
+        throw err;
+    }
+});

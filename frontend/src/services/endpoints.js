@@ -10,6 +10,12 @@ export const ENDPOINTS = {
     refresh: '/api/auth/refresh',
     logout: '/api/auth/logout',
     me: '/api/auth/me',
+
+    // User CRUD
+    list: 'api/auth/list',
+    create: '/api/auth/create',
+    update: byId('/api/auth/update'),
+    delete: byId('/api/auth/delete'),
   },
 
   // Students

@@ -18,6 +18,7 @@ const resources = {
         attendance: 'Attendance',
         payments: 'Payments',
         profile: 'Profile',
+        users: 'Users',
         logout: 'Logout',
       },
       common: {
@@ -80,6 +81,7 @@ const resources = {
         attendance: 'វត្តមាន',
         payments: 'ការទូទាត់',
         profile: 'ប្រវត្តិរូប',
+        users: 'អ្នកប្រើប្រាស់',
         logout: 'ចាកចេញ',
       },
       common: {

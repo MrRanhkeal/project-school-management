@@ -27,25 +27,74 @@ function publicUser(user) {
  * Add-Teacher form). When none is given, a random temporary password is
  * generated and returned ONCE so the admin can hand it to the person.
  */
-async function resolveUser({ email, fullName, role, password }) {
-    email = email.toLowerCase().trim();
-
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-        return { ...publicUser(existing), created: false };
+async function resolveUser({
+    email,
+    fullName,
+    role = 'student',
+    password,
+}) {
+    if (!email) {
+        throw new ApiError(400, 'Email is required');
     }
-
-    const tempPassword = password ? null : crypto.randomBytes(6).toString('base64url');
-    const passwordHash = await bcrypt.hash(password || tempPassword, BCRYPT_ROUNDS);
-    const user = await User.create({
-        email,
-        passwordHash,
-        fullName,
-        role: role || 'teacher',
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await User.findOne({
+        where: {
+            email: normalizedEmail,
+        },
     });
-    logger.info('Internal user created', { userId: String(user.id), role: user.role });
-    return { ...publicUser(user), created: true, ...(tempPassword && { tempPassword }) };
+    if (existing) {
+        return {
+            ...publicUser(existing),
+            created: false,
+        };
+    }
+    const resolvedPassword =
+        password || crypto.randomBytes(12).toString('base64url');
+
+    const passwordHash = await bcrypt.hash(
+        resolvedPassword,
+        BCRYPT_ROUNDS
+    );
+    const user = await User.create({
+        email: normalizedEmail,
+        passwordHash,
+        fullName: fullName?.trim() || null,
+        role,
+    });
+
+    logger.info('Internal user created', {
+        userId: String(user.id),
+        role: user.role,
+    });
+
+    return {
+        ...publicUser(user),
+        created: true,
+        ...(password
+            ? {}
+            : { tempPassword: resolvedPassword }),
+    };
 }
+
+// async function resolveUser({ email, fullName, role, password }) {
+//     email = email.toLowerCase().trim();
+
+//     const existing = await User.findOne({ where: { email } });
+//     if (existing) {
+//         return { ...publicUser(existing), created: false };
+//     }
+
+//     const tempPassword = password ? null : crypto.randomBytes(6).toString('base64url');
+//     const passwordHash = await bcrypt.hash(password || tempPassword, BCRYPT_ROUNDS);
+//     const user = await User.create({
+//         email,
+//         passwordHash,
+//         fullName,
+//         role: role || 'teacher',
+//     });
+//     logger.info('Internal user created', { userId: String(user.id), role: user.role });
+//     return { ...publicUser(user), created: true, ...(tempPassword && { tempPassword }) };
+// }
 
 /** Batch lookup used for the application-level "join" on reads. */
 async function getUsersByIds(ids) {

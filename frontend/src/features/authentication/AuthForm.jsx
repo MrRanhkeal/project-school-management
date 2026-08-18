@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Paper, Typography, Alert, Link, Stack, Avatar } from '@mui/material';
+import { Paper, Typography, Alert, Link, Stack, Avatar, SpeedDialIcon } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import useAuth from '../../hooks/useAuth';
 import useForm from '../../hooks/useForm';
@@ -10,6 +10,10 @@ import { getApiError } from '../../utils/helpers';
 import { ROLES } from '../../utils/constants';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import { InputAdornment, IconButton } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+
 
 /** Shared login / register form. mode: 'login' | 'register' */
 export default function AuthForm({ mode = 'login' }) {
@@ -18,7 +22,7 @@ export default function AuthForm({ mode = 'login' }) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
 
@@ -34,14 +38,17 @@ export default function AuthForm({ mode = 'login' }) {
       email: compose(required(), email()),
       password: compose(required(), ...(isRegister ? [minLength(8)] : [])),
       ...(isRegister ? {
-        fullName: compose(required(), minLength(2)) ,
+        fullName: compose(required(), minLength(2)),
 
       } : {}),
     }
   );
 
+  const handleTogglePassword = () => {
+    setShowPassword((prev) => !prev);
+  };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, res) => {
     e.preventDefault();
     setServerError('');
     if (!validate()) return;
@@ -49,11 +56,17 @@ export default function AuthForm({ mode = 'login' }) {
     try {
       if (isRegister) {
         await register(values);
+        navigate('/login', { replace: true });
       } else {
         await login(values);
+        const from = location.state?.from?.pathname || '/';
+        navigate(from, { replace: true });
+        res.sent(2001).json({
+          message: 'Account Registerd'
+        })
       }
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      // const from = location.state?.from?.pathname || '/';
+      // navigate(from, { replace: true });
     } catch (err) {
       setServerError(getApiError(err));
     } finally {
@@ -111,7 +124,8 @@ export default function AuthForm({ mode = 'login' }) {
         />
         <Input
           name="password"
-          type="password"
+          // type="password"
+          type={showPassword ? 'text' : "password"}
           label={t('auth.password')}
           value={values.password}
           onChange={handleChange}
@@ -119,19 +133,16 @@ export default function AuthForm({ mode = 'login' }) {
           helperText={errors.password}
           autoComplete={isRegister ? 'new-password' : 'current-password'}
 
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton onClick={handleTogglePassword} edge="end">
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
-        {/* {isRegister &&
-          (
-            <Input
-              name="role"
-              type="select"
-              label={t('auth.role')}
-              value={values.role}
-              onChange={handleChange}
-              options={[ROLES.STUDENT, ROLES.TEACHER, ROLES.STAFF, ROLES.ADMIN]}
-            />
-          )
-        } */}
 
         <Button type="submit" fullWidth size="large" loading={submitting} sx={{ mt: 2 }}>
           {isRegister ? t('auth.register') : t('auth.login')}

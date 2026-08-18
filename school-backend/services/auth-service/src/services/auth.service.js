@@ -117,7 +117,7 @@ async function login({ email, password }) {
         signRefreshToken(user),
     ]);
     return { user: publicUser(user), accessToken, refreshToken };
-    
+
 }
 
 async function refresh({ refreshToken }) {
@@ -174,4 +174,108 @@ async function userList(query = {}) {
     };
 }
 
-module.exports = { register, login, refresh, logout, me, userList };
+async function updateUser(userId, { email, password, fullName, role, status }) {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+        throw ApiError.notFound('User not found');
+    }
+
+    if (email) {
+        email = email.toLowerCase().trim();
+
+        const existing = await User.findOne({
+            where: { email },
+        });
+
+        if (existing && String(existing.id) !== String(userId)) {
+            throw ApiError.conflict('Email is already registered');
+        }
+
+        user.email = email;
+    }
+
+    if (fullName !== undefined) {
+        user.fullName = fullName;
+    }
+
+    if (role !== undefined) {
+        user.role = role;
+    }
+
+    if (status !== undefined) {
+        user.status = status;
+    }
+
+    // Only hash password when a new password is provided
+    if (password) {
+        user.passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    }
+
+    await user.save();
+
+    logger.info('User updated', {
+        userId: String(user.id),
+    });
+
+    return publicUser(user);
+}
+
+async function deleteUser(userId) {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+        throw ApiError.notFound('User not found');
+    }
+
+    await user.destroy();
+
+    logger.info('User deleted', {
+        userId: String(user.id),
+    });
+
+    return {
+        message: 'User deleted successfully',
+    };
+}
+
+async function createUser({ email, password, fullName, role, status }) {
+    email = email.toLowerCase().trim();
+    const existing = await User.findOne({ where: { email } });
+    if (existing) {
+        throw ApiError.conflict('Email is already registered');
+    }
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const user = await User.create({
+        email,
+        passwordHash,
+        fullName,
+        role,
+        status: status || 'active'
+    });
+
+    // Bind the domain profile for students/teachers
+    let profile = null;
+    if (user.role === 'student' || user.role === 'teacher') {
+        try {
+            profile = await academicClient.resolveProfile({
+                userId: Number(user.id),
+                email,
+                fullName,
+                role: user.role,
+            });
+        } catch (err) {
+            await user.destroy();
+            throw err;
+        }
+    }
+
+    logger.info('User created by admin', {
+        userId: String(user.id),
+        role: user.role
+    });
+
+    return { ...publicUser(user), profile };
+}
+
+module.exports = { register, login, refresh, logout, me, userList, updateUser, deleteUser, createUser };

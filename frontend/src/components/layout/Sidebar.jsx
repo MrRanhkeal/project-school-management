@@ -25,6 +25,7 @@ import PersonIcon from '@mui/icons-material/PersonOutline';
 import { setSidebar } from '../../redux/actions';
 import useAuth from '../../hooks/useAuth';
 import { DRAWER_WIDTH, ROLES } from '../../utils/constants';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 
 const NAV_ITEMS = [
   { key: 'dashboard', path: '/', icon: <DashboardIcon /> },
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { key: 'grades', path: '/grades', icon: <GradeIcon /> },
   { key: 'attendance', path: '/attendance', icon: <EventAvailableIcon /> },
   { key: 'payments', path: '/payments', icon: <PaymentsIcon />, roles: [ROLES.ADMIN, ROLES.STAFF] },
+  { key: 'users', path: '/users', icon: <PeopleAltIcon />, roles: [ROLES.ADMIN, ROLES.STAFF] },
   { key: 'profile', path: '/profile', icon: <PersonIcon /> },
 ];
 

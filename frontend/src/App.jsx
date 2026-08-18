@@ -21,6 +21,7 @@ import Course from './pages/course/Course';
 import Attendance from './pages/attendance/Attendance';
 import Classroom from './pages/classroom/Classroom';
 import Payment from './pages/payment/Payment';
+import User from './pages/users/Users';
 
 /** Authenticated shell: fixed header, responsive sidebar, footer. */
 function AppLayout() {
@@ -112,6 +113,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={[ROLES.ADMIN, ROLES.STAFF]}>
                 <Payment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.STAFF]}>
+                <User />
               </ProtectedRoute>
             }
           />

@@ -140,35 +140,205 @@ Auth middleware fails closed: if Redis is unreachable, protected requests are re
 ## Project layout
 
 ```
-project-school/
+school-backend/
 ├── docker-compose.yml
 ├── .env.example
+├── .gitignore
+├── README.md
 ├── db/
-│   └── init.sql                # creates all 4 databases + seed admin
+│   ├── init.sql 
+├── infra/
+│   └── redis/
+│       └── redis.conf
 ├── nginx/
-│   └── nginx.conf              # API gateway: routing + rate limiting
-├── shared/                     # local npm package "school-shared"
+│   └── nginx.conf
+├── logs/
+│   └── file.log
+├── shared/
 │   ├── config/
+│   │   └── index.js
 │   ├── db/
+│   │   └── index.js
 │   ├── logger/
+│   │   └── index.js
 │   ├── middleware/
+│   │   ├── authenticate.js
+│   │   ├── authorize.js
+│   │   ├── errorHandler.js
+│   │   └── rateLimiter.js
+│   │   └── logErr.js
 │   ├── redis/
+│   │   └── index.js
 │   ├── server/
+│   │   └── index.js
 │   ├── utils/
+│   │   ├── index.js
+│   ├── package.json
 │   └── index.js
 └── services/
     ├── auth-service/
-    │   └── src/
-    │       ├── index.js
-    │       └── routes/auth.js
+    │   ├── src/
+    │   │   ├── config/
+    │   │   │   └── db.js
+    │   │   ├── clients/
+    │   │   │   ├── academic.client.js
+    │   │   │   ├── notification.client.js
+    │   │   │   └── payment.client.js
+    │   │   ├── controllers/
+    │   │   │   └── auth.controller.js
+    │   │   ├── models/
+    │   │   │   ├── index.js
+    │   │   │   └── user.model.js 
+    │   │   ├── routes/
+    │   │   │   └── auth.routes.js 
+    │   │   ├── services/
+    │   │   │   └── auth.service.js 
+    │   │   │   └── email.service.js
+    │   │   ├── validators/
+    │   │   │   └── auth.validator.js  
+    │   │   ├── app.js
+    │   │   └── index.js 
+    │   ├── .env
+    │   ├── Dockerfile
+    │   └── package.json 
     ├── academic-service/
-    │   └── src/
-    │       ├── index.js
-    │       └── routes/{students,teachers,classrooms,courses}.js
+    │   ├── src/
+    │   │   ├── config/
+    │   │   │   └── db.js 
+    │   │   ├── clients/
+    │   │   │   ├── auth.client.js
+    │   │   │   ├── notification.client.js
+    │   │   │   └── payment.client.js 
+    │   │   ├── controllers/
+    │   │   │   ├── class.controller.js
+    │   │   │   ├── course.controller.js 
+    │   │   │   ├── enrollment.controller.js 
+    │   │   │   ├── student.controller.js
+    │   │   │   └── teacher.controller.js 
+    │   │   ├── models/
+    │   │   │   ├── index.js
+    │   │   │   ├── classe.model.js
+    │   │   │   ├── course.model.js 
+    │   │   │   ├── enrollment.model.js 
+    │   │   │   ├── student.model.js
+    │   │   │   └── teacher.model.js 
+    │   │   ├── routes/
+    │   │   │   ├── class.routes.js
+    │   │   │   ├── course.routes.js 
+    │   │   │   ├── enrollment.routes.js 
+    │   │   │   ├── student.routes.js
+    │   │   │   └── teacher.routes.js 
+    │   │   ├── services/
+    │   │   │   ├── class.service.js
+    │   │   │   ├── course.service.js 
+    │   │   │   ├── enrollment.service.js 
+    │   │   │   ├── student.service.js
+    │   │   │   └── teacher.service.js 
+    │   │   ├── validators/
+    │   │   │   ├── class.validator.js
+    │   │   │   ├── course.validator.js
+    │   │   │   ├── enrollment.validator.js
+    │   │   │   ├── student.validator.js
+    │   │   │   └── teacher.validator.js
+    │   │   ├── app.js
+    │   │   └── index.js 
+    │   ├── .env
+    │   ├── Dockerfile
+    │   └── package.json 
     ├── records-service/
-    │   └── src/routes/{grades,attendance}.js
+    │   ├── src/
+    │   │   ├── config/
+    │   │   │   └── db.js 
+    │   │   ├── clients/
+    │   │   │   ├── academic.client.js
+    │   │   │   ├── auth.client.js
+    │   │   │   └── notification.client.js 
+    │   │   ├── controllers/
+    │   │   │   ├── attendance.controller.js
+    │   │   │   └── grade.controller.js 
+    │   │   ├── models/
+    │   │   │   ├── index.js
+    │   │   │   ├── attendance.model.js
+    │   │   │   └── grade.model.js 
+    │   │   ├── routes/
+    │   │   │   ├── attendance.routes.js
+    │   │   │   └── grade.routes.js 
+    │   │   ├── services/
+    │   │   │   ├── attendance.service.js
+    │   │   │   └── grade.service.js 
+    │   │   ├── validators/
+    │   │   │   ├── attendance.validator.js
+    │   │   │   └── grade.validator.js 
+    │   │   ├── app.js
+    │   │   └── index.js 
+    │   ├── .env
+    │   ├── Dockerfile
+    │   └── package.json 
+    ├── notification-service/
+    │   ├── src/
+    │   │   ├── clients/
+    │   │   │   ├── directory.client.js
+    │   │   ├── routes/
+    │   │   │   ├── internal.routes.js
+    │   │   │   └── notification.routes.js 
+    │   │   ├── app.js
+    │   │   └── index.js 
+    │   │   └── queue.js 
+    │   │   └── dispatcher.js 
+    │   ├── .env
+    │   ├── Dockerfile
+    │   └── package.json 
+    ├── administra-service/
+    │   ├── src/
+    │   │   ├── config/
+    │   │   │   └── db.js
+    │   │   ├── clients/ 
+    │   │   │   ├── notification.client.js 
+    │   │   ├── controllers/
+    │   │   │   └── department.controller.js
+    │   │   │   └── staff.controller.js
+    │   │   ├── models/
+    │   │   │   ├── index.js
+    │   │   │   └── staff.model.js 
+    │   │   │   └── department.model.js 
+    │   │   ├── routes/
+    │   │   │   └── staff.routes.js 
+    │   │   │   └── department.routes.js 
+    │   │   ├── services/
+    │   │   │   └── department.service.js 
+    │   │   │   └── staff.service.js 
+    │   │   ├── validators/
+    │   │   │   └── staff.validator.js 
+    │   │   │   └── department.validator.js 
+    │   │   ├── app.js
+    │   │   └── index.js 
+    │   ├── .env
+    │   ├── Dockerfile
+    │   └── package.json 
     └── payment-service/
-        └── src/routes/payments.js
+        ├── src/
+        │   ├── config/
+        │   │   └── db.js 
+        │   ├── clients/
+        │   │   ├── academic.client.js
+        │   │   └── auth.client.js 
+        │   ├── controllers/
+        │   │   └── payment.controller.js 
+        │   ├── models/
+        │   │   ├── index.js
+        │   │   └── payment.model.js 
+        │   ├── routes/
+        │   │   └── payment.routes.js 
+        │   ├── services/
+        │   │   └── payment.service.js 
+        │   ├── validators/
+        │   │   └── payment.validator.js 
+        │   ├── app.js
+        │   ├── index.js 
+        │   ├── .env
+        │   ├── Dockerfile
+        │   └── package.json
+
 ```
 
 ## Production notes
