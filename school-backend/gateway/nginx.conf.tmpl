@@ -1,0 +1,75 @@
+worker_processes auto;
+worker_rlimit_nofile 40960;
+
+events {
+    worker_connections 40960;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/json;
+
+    # Performance
+    sendfile           on;
+    tcp_nopush         on;
+    tcp_nodelay        on;
+    keepalive_timeout  65;
+    server_tokens      off;
+
+    # gzip responses (API JSON benefits a lot)
+    gzip               on;
+    gzip_comp_level    5;
+    gzip_min_length    256;
+    gzip_proxied       any;
+    gzip_types         application/json application/javascript text/plain text/css application/xml;
+
+    # Logging
+    log_format main '$remote_addr - $request_time "$request" $status $body_bytes_sent';
+    access_log /var/log/nginx/access.log main;
+    error_log  /var/log/nginx/error.log warn;
+
+    # Edge rate limiting (defence in depth; services also rate-limit)
+    limit_req_zone $binary_remote_addr zone={{RATE_LIMIT_ZONE}}:{{RATE_LIMIT_SIZE}} rate={{RATE_LIMIT_RATE}};
+
+    # ---- upstreams (generated from gateway/routes.manifest.js) ----
+{{UPSTREAMS}}
+
+    # Shared proxy settings
+    proxy_http_version 1.1;
+    proxy_set_header   Connection "";
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_connect_timeout {{PROXY_CONNECT_TIMEOUT}};
+    proxy_read_timeout    {{PROXY_READ_TIMEOUT}};
+    proxy_send_timeout    {{PROXY_SEND_TIMEOUT}};
+
+    server {
+        listen {{LISTEN}} default_server;
+        server_name _;
+
+        client_max_body_size {{CLIENT_MAX_BODY_SIZE}};
+
+        # Redirects use the internal port 80, not the published host port.
+        absolute_redirect off;
+
+        # Gateway health
+        location = /health {
+            default_type application/json;
+            return 200 '{"service":"gateway","status":"ok"}';
+        }
+
+        # Services mount their routes under /api/... themselves, so the
+        # original URI is passed through unchanged (no path rewrite).
+        # nginx matches the LONGEST prefix, so the /internal blocks below
+        # always win over the public prefix they sit under.
+
+{{LOCATIONS}}
+        # Everything else
+        location / {
+            default_type application/json;
+            return 404 '{"error":"route not found"}';
+        }
+    }
+}

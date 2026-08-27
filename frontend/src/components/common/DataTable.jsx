@@ -17,7 +17,9 @@ import {
 /**
  * Server-paginated table.
  *
- * columns: [{ id, label, render?(row), align?, minWidth? }]
+ * columns: [{ id, label, render?(row, index, rowNumber), align?, minWidth? }]
+ *          index     — 0-based position within the current page
+ *          rowNumber — 1-based position across all pages (11, 12, … on page 2)
  * meta:    { page, limit, total } from the backend list envelope
  */
 export default function DataTable({
@@ -27,9 +29,12 @@ export default function DataTable({
   loading = false,
   onPageChange,
   onLimitChange,
-  getRowKey = (row) => row.id,
+  getRowKey = (row, index) => row.id ?? index,
 }) {
   const { t } = useTranslation();
+
+  // Offset of the current page, so a "#" column can number rows continuously.
+  const pageOffset = ((meta?.page || 1) - 1) * (meta?.limit || rows.length || 0);
 
   return (
     <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
@@ -64,11 +69,13 @@ export default function DataTable({
               </TableRow>
             )}
             {!loading &&
-              rows.map((row) => (
-                <TableRow hover key={getRowKey(row)}>
+              rows.map((row, index) => (
+                <TableRow hover key={getRowKey(row, index)}>
                   {columns.map((col) => (
                     <TableCell key={col.id} align={col.align || 'left'}>
-                      {col.render ? col.render(row) : (row[col.id] ?? '—')}
+                      {col.render
+                        ? col.render(row, index, pageOffset + index + 1)
+                        : (row[col.id] ?? '—')}
                     </TableCell>
                   ))}
                 </TableRow>

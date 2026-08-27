@@ -23,7 +23,7 @@ Services are **not** exposed to the host — only the gateway on port 8080.
 | Gateway route | Service | Notes |
 |---|---|---|
 | `/api/auth/*` | auth-service | login, register, refresh, logout |
-| `/api/students`, `/api/teachers`, `/api/classrooms`, `/api/courses` | academic-service | |
+| `/api/students`, `/api/teachers`, `/api/classrooms`, `/api/courses`, `/api/enrollments` | academic-service | `/api/enrollments` binds a student to a course per academic year + term |
 | `/api/grades`, `/api/attendance` | records-service | |
 | `/api/payments` | payment-service | admin only |
 
@@ -134,6 +134,7 @@ curl -s -X PATCH $B/payments/1/status -H "Authorization: Bearer $TOKEN" \
 
 - `refresh:<userId>:<jti>` — whitelisted refresh tokens (7-day TTL, rotated on use)
 - `blacklist:<accessToken>` — revoked access tokens (TTL = remaining lifetime)
+- `enrollment:<id>` / `enrollment:list:*` — cache-aside for enrollment reads (invalidated on write)
 
 Auth middleware fails closed: if Redis is unreachable, protected requests are rejected.
 
@@ -404,3 +405,21 @@ school-backend/
     #onmac pull redis & nginx
 docker pull redis:7-alpine
 docker pull nginx:1.27-alpine
+
+## check
+services:
+  auth-service:
+    image: your-auth-image
+    expose:
+      - "4001"
+
+docker compose up -d --scale auth-service=3
+
+                       ┌── auth × 3
+                       │
+                       ├── academic × 3
+Internet → NGINX ─────┼── record × 3
+                       │
+                       ├── payment × 2
+                       │
+                       └── notification × 2

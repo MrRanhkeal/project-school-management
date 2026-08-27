@@ -1,8 +1,8 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { logger, redis } = require('@school/shared');
-const { Student, Teacher, Course, SchoolClass } = require('../models');
+const { logger } = require('@school/shared');
+const { Student, Teacher, Course, SchoolClass, Enrollment } = require('../models');
 
 /**
  * Called by auth-service after /api/auth/register: creates the matching
@@ -36,10 +36,6 @@ async function resolveStudentProfile({ userId, email, fullName }) {
         const byEmail = await Student.findOne({ where: { email, userId: null } });
         if (byEmail) {
             await byEmail.update({ userId });
-            await Promise.all([
-                redis.invalidate(`student:${byEmail.id}`),
-                redis.invalidate('student:list:*'),
-            ]);
             return { ...byEmail.toJSON(), created: false };
         }
     }
@@ -54,7 +50,6 @@ async function resolveStudentProfile({ userId, email, fullName }) {
         level: 'primary',
         enrollmentYear: new Date().getFullYear(),
     });
-    await redis.invalidate('student:list:*');
     logger.info('Student profile created from registration', {
         studentId: String(student.id),
         userId: String(userId),
@@ -70,10 +65,6 @@ async function resolveTeacherProfile({ userId, email, fullName }) {
         const byEmail = await Teacher.findOne({ where: { email, userId: null } });
         if (byEmail) {
             await byEmail.update({ userId });
-            await Promise.all([
-                redis.invalidate(`teacher:${byEmail.id}`),
-                redis.invalidate('teacher:list:*'),
-            ]);
             return { ...byEmail.toJSON(), created: false };
         }
     }
@@ -85,7 +76,6 @@ async function resolveTeacherProfile({ userId, email, fullName }) {
         teacherCode,
         ...splitName(fullName),
     });
-    await redis.invalidate('teacher:list:*');
     logger.info('Teacher profile created from registration', {
         teacherId: String(teacher.id),
         userId: String(userId),
@@ -135,12 +125,60 @@ async function getClassesByIds(ids) {
     });
 }
 
+async function getEnrollmentsByIds(ids) {
+    return Enrollment.findAll({
+        where: { id: { [Op.in]: ids } },
+        attributes: [
+            'id', 'studentId', 'courseId', 'classId',
+            'academicYear', 'term', 'status', 'enrolledAt', 'finalGrade',
+        ],
+        raw: true,
+    });
+}
+
+/**
+ * Batch read for record-service: every enrollment of the given students,
+ * so grades/attendance screens can show which courses a student is taking
+ * without a second round-trip per student.
+ */
+async function getEnrollmentsByStudentIds(ids, { status } = {}) {
+    const where = { studentId: { [Op.in]: ids } };
+    if (status) where.status = status;
+    return Enrollment.findAll({
+        where,
+        attributes: [
+            'id', 'studentId', 'courseId', 'classId',
+            'academicYear', 'term', 'status', 'enrolledAt', 'finalGrade',
+        ],
+        raw: true,
+    });
+}
+
+/**
+ * Business-rule check for record-service: a grade may only be recorded for a
+ * student who is actually enrolled in that course. Returns the matching
+ * enrollment (or null), so the caller can reject the write with a precise
+ * error the same way a FOREIGN KEY would.
+ */
+async function verifyEnrollment({ studentId, courseId, academicYear, term, status = 'active' }) {
+    const where = { studentId, courseId };
+    if (academicYear) where.academicYear = academicYear;
+    if (term) where.term = term;
+    if (status) where.status = status;
+    const row = await Enrollment.findOne({
+        where,
+        attributes: ['id', 'studentId', 'courseId', 'classId', 'academicYear', 'term', 'status'],
+        raw: true,
+    });
+    return { enrolled: Boolean(row), enrollment: row || null };
+}
+
 /**
  * Existence check for cross-service references. Returns the ids that do NOT
  * exist, grouped by kind, so the caller can reject the write with a precise
  * error — the closest equivalent of a FOREIGN KEY constraint across services.
  */
-async function verifyRefs({ studentIds = [], courseIds = [], classIds = [] }) {
+async function verifyRefs({ studentIds = [], courseIds = [], classIds = [], enrollmentIds = [] }) {
     const missing = {};
     const check = async (model, ids, key) => {
         const unique = [...new Set(ids.map(Number))];
@@ -159,6 +197,7 @@ async function verifyRefs({ studentIds = [], courseIds = [], classIds = [] }) {
         check(Student, studentIds, 'studentIds'),
         check(Course, courseIds, 'courseIds'),
         check(SchoolClass, classIds, 'classIds'),
+        check(Enrollment, enrollmentIds, 'enrollmentIds'),
     ]);
     return { valid: Object.keys(missing).length === 0, missing };
 }
@@ -168,5 +207,8 @@ module.exports = {
     getStudentsByIds,
     getCoursesByIds,
     getClassesByIds,
+    getEnrollmentsByIds,
+    getEnrollmentsByStudentIds,
+    verifyEnrollment,
     verifyRefs,
 };

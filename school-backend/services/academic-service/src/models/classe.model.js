@@ -1,8 +1,8 @@
 `use strict`
-const sequilize = require("../config/database");
+const sequelize = require("../config/database");
 const { DataTypes } = require('sequelize');
 
-const Classe = sequilize.define(
+const Classe = sequelize.define(
     `Class`,
     {
         id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
@@ -24,6 +24,10 @@ const Classe = sequilize.define(
     },
     {
         tableName: 'classes',
+        // Cache namespace: class:*
+        cacheEntity: 'class',
+        // student/course/enrollment reads all embed the class summary.
+        cacheDependents: ['student', 'course', 'enrollment'],
         indexes: [
             { fields: ['level'] },
             { fields: ['academic_year'] },

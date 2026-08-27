@@ -1,14 +1,10 @@
 'use strict';
 
-const { config, ApiError, redis } = require('@school/shared');
+const { ApiError, redis } = require('@school/shared');
 const { SchoolClass, Teacher, Student, Course } = require('../models');
 
-const CACHE_TTL = config.redis.cacheTtl;
-const idKey = (id) => `class:${id}`;
-const LIST_TAG = 'class:list:*';
-
 async function getById(id) {
-    const row = await redis.cacheWrap(idKey(id), CACHE_TTL, async () => {
+    const row = await redis.byId(SchoolClass, id, async () => {
         const r = await SchoolClass.findByPk(id, {
             include: [
                 {
@@ -40,8 +36,7 @@ async function list(query) {
     if (level) where.level = level;
     if (academicYear) where.academicYear = academicYear;
     if (status) where.status = status;
-    const cacheKey = `class:list:${JSON.stringify({ where, page, limit })}`;
-    return redis.cacheWrap(cacheKey, 60, async () => {
+    return redis.list(SchoolClass, { page, limit, level, academicYear, status }, async () => {
         const { rows, count } = await SchoolClass.findAndCountAll({
             where,
             limit,
@@ -75,7 +70,6 @@ async function assertTeacherExists(teacherId) {
 async function create(data) {
     await assertTeacherExists(data.homeroomTeacherId);
     const c = await SchoolClass.create(data);
-    await redis.invalidate(LIST_TAG);
     return c.toJSON();
 }
 
@@ -84,7 +78,6 @@ async function update(id, data) {
     if (!c) throw ApiError.notFound('Class not found');
     await assertTeacherExists(data.homeroomTeacherId);
     await c.update(data);
-    await Promise.all([redis.invalidate(idKey(id)), redis.invalidate(LIST_TAG)]);
     return c.toJSON();
 }
 
@@ -92,7 +85,6 @@ async function remove(id) {
     const c = await SchoolClass.findByPk(id);
     if (!c) throw ApiError.notFound('Class not found');
     await c.destroy();
-    await Promise.all([redis.invalidate(idKey(id)), redis.invalidate(LIST_TAG)]);
 }
 
 module.exports = { getById, list, create, update, remove };

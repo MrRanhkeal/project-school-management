@@ -56,7 +56,50 @@ exports.classesByIds = asyncHandler(async (req, res) => {
     }
 });
 
-// POST /api/academic/internal/refs/verify  { studentIds?, courseIds?, classIds? }
+// GET /api/academic/internal/enrollments?ids=1,2,3
+exports.enrollmentsByIds = asyncHandler(async (req, res) => {
+    try{
+        const ids = parseIds(req.query.ids);
+        ok(res, ids.length ? await internalService.getEnrollmentsByIds(ids) : []);
+    }
+    catch(err){
+        logErr('academic.internal.enrollmentById',err,res);
+        throw err;
+    }
+});
+
+// GET /api/academic/internal/enrollments/by-student?ids=1,2,3&status=active
+exports.enrollmentsByStudent = asyncHandler(async (req, res) => {
+    try{
+        const ids = parseIds(req.query.ids);
+        if (!ids.length) return ok(res, {});
+        const rows = await internalService.getEnrollmentsByStudentIds(ids, {
+            status: req.query.status,
+        });
+        const byStudent = {};
+        for (const e of rows) {
+            (byStudent[e.studentId] ??= []).push(e);
+        }
+        ok(res, byStudent);
+    }
+    catch(err){
+        logErr('academic.internal.enrollmentByStudent',err,res);
+        throw err;
+    }
+});
+
+// POST /api/academic/internal/enrollments/verify  { studentId, courseId, ... }
+exports.verifyEnrollment = asyncHandler(async (req, res) => {
+    try{
+        ok(res, await internalService.verifyEnrollment(req.body));
+    }
+    catch(err){
+        logErr('academic.internal.verifyEnrollment',err,res);
+        throw err;
+    }
+});
+
+// POST /api/academic/internal/refs/verify  { studentIds?, courseIds?, classIds?, enrollmentIds? }
 exports.verifyRefs = asyncHandler(async (req, res) => {
     ok(res, await internalService.verifyRefs(req.body));
 });

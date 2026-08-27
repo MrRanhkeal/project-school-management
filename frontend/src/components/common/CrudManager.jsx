@@ -1,7 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { Box, Stack, Typography, IconButton, InputAdornment, TextField } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Typography,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Tooltip,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
@@ -23,7 +31,13 @@ import DataTable from './DataTable';
  * columns:    DataTable columns
  * formFields: [{ name, label, type, options, required, validate?(value), half?, createOnly? }]
  *             createOnly fields are shown (and validated) only when adding a new row.
- * filters:    [{ name, label, type: 'select', options }] rendered above the table
+ * filters:    [{ name, label, type, options, inputProps? }] rendered above the table.
+ *             type defaults to 'select' (needs `options`); 'number' / 'text'
+ *             render a free-typed box whose value is debounced before it
+ *             reaches the query, so typing does not fire a request per keystroke.
+ * rowActions: [{ key, icon, title, color?, onClick(row, { refresh }), hidden?(row) }]
+ *             extra buttons shown before edit/delete in the actions column.
+ *             Call refresh() after an action that changed the row.
  * writeRoles / deleteRoles: roles allowed to create+edit / delete
  */
 export default function CrudManager({
@@ -32,6 +46,7 @@ export default function CrudManager({
   columns,
   formFields = [],
   filters = [],
+  rowActions = [],
   searchable = true,
   writeRoles,
   deleteRoles,
@@ -49,6 +64,7 @@ export default function CrudManager({
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState({ page: 1, limit: DEFAULT_PAGE_SIZE, search: '' });
   const [searchInput, setSearchInput] = useState('');
+  const [filterInputs, setFilterInputs] = useState({}); // typed (non-select) filters
 
   const [editing, setEditing] = useState(null); // null | {} (new) | row (edit)
   const [deleting, setDeleting] = useState(null);
@@ -85,6 +101,19 @@ export default function CrudManager({
     }, 400);
     return () => clearTimeout(id);
   }, [searchInput]);
+
+  // Debounced typed filters (number/text). Returning the SAME query object when
+  // nothing actually changed matters: query is a dependency of fetchList, so a
+  // fresh object here would re-fire the request on every render.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setQuery((q) => {
+        const changed = Object.entries(filterInputs).some(([k, v]) => (q[k] ?? '') !== v);
+        return changed ? { ...q, ...filterInputs, page: 1 } : q;
+      });
+    }, 400);
+    return () => clearTimeout(id);
+  }, [filterInputs]);
 
   const openForm = (row) => {
     setValues(row ? { ...emptyForm, ...pickFields(row, formFields) } : emptyForm);
@@ -148,10 +177,10 @@ export default function CrudManager({
     } finally {
       setSaving(false);
     }
-  }; 
-  
+  };
+
   const allColumns = useMemo(() => {
-    if (!canWrite && !canDelete) return columns;
+    if (!canWrite && !canDelete && rowActions.length === 0) return columns;
     return [
       ...columns,
       {
@@ -160,6 +189,21 @@ export default function CrudManager({
         align: 'right',
         render: (row) => (
           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+            {rowActions
+              .filter((a) => !a.hidden?.(row))
+              .map((a) => (
+                <Tooltip key={a.key} title={a.title || ''}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      color={a.color || 'default'}
+                      onClick={() => a.onClick(row, { refresh: fetchList })}
+                    >
+                      {a.icon}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              ))}
             {canWrite && (
               <IconButton size="small" color="primary" onClick={() => openForm(row)}>
                 <EditIcon fontSize="small" />
@@ -175,7 +219,7 @@ export default function CrudManager({
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columns, canWrite, canDelete, t]);
+  }, [columns, canWrite, canDelete, rowActions, fetchList, t]);
 
   return (
     <Box >
@@ -211,32 +255,53 @@ export default function CrudManager({
             }}
           />
         )}
-        {filters.map((f) => (
-          <Input
-            key={f.name}
-            type="select"
-            allowEmpty
-            label={f.label}
-            options={f.options}
-            value={query[f.name] ?? ''}
-            onChange={(e) => setQuery((q) => ({ ...q, [f.name]: e.target.value, page: 1 }))}
-            sx={{ minWidth: 160, m: 0 }}
-            margin="none"
-          />
-        ))}
+        {filters.map((f) => {
+          const type = f.type || 'select';
+          if (type === 'select') {
+            return (
+              <Input
+                key={f.name}
+                type="select"
+                allowEmpty
+                label={f.label}
+                options={f.options}
+                value={query[f.name] ?? ''}
+                onChange={(e) => setQuery((q) => ({ ...q, [f.name]: e.target.value, page: 1 }))}
+                sx={{ minWidth: 160, m: 0 }}
+                margin="none"
+              />
+            );
+          }
+          return (
+            <Input
+              key={f.name}
+              type={type}
+              label={f.label}
+              value={filterInputs[f.name] ?? ''}
+              onChange={(e) =>
+                setFilterInputs((s) => ({ ...s, [f.name]: e.target.value }))
+              }
+              inputProps={f.inputProps}
+              sx={{ minWidth: 130, m: 0 }}
+              margin="none"
+            />
+          );
+        })}
       </Stack>
 
       <DataTable
-        columns={allColumns}
         rows={rows}
-        meta={meta}
+        columns={allColumns}
         loading={loading}
+        page={query.page}
+        limit={query.limit}
+        meta={meta}
         onPageChange={(page) => setQuery((q) => ({ ...q, page }))}
         onLimitChange={(limit) => setQuery((q) => ({ ...q, limit, page: 1 }))}
       />
 
       {/* Create / edit dialog */}
-      <Modal  
+      <Modal
         open={Boolean(editing)}
         onClose={() => setEditing(null)}
         title={editing?.id ? `${t('common.edit')} — ${title}` : `${t('common.add')} — ${title}`}
@@ -266,6 +331,7 @@ export default function CrudManager({
                 type={f.type || 'text'}
                 options={f.options || []}
                 allowEmpty={!f.required}
+                inputProps={f.inputProps}
                 value={values[f.name] ?? ''}
                 onChange={handleFieldChange}
                 error={Boolean(errors[f.name])}

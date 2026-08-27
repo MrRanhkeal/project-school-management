@@ -1,12 +1,15 @@
+
 `use strict`
 const { DataTypes } = require('sequelize');
-const sequilize = require('../config/database');
+const sequelize = require('../config/database');
 
-const Course = sequilize.define(
+const Course = sequelize.define(
     'Course',
     {
         id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-        code: { type: DataTypes.STRING(20), allowNull: false, unique: true },
+        // Uniqueness is declared once, in `indexes` below - an attribute-level
+        // `unique: true` here would make sync() build a second redundant index.
+        code: { type: DataTypes.STRING(20), allowNull: true },
         title: { type: DataTypes.STRING(140), allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         level: {
@@ -18,6 +21,7 @@ const Course = sequilize.define(
         teacherId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true }, //FOREIGN KEY (teacherId) REFERENCES teachers(id) ON DELETE SET NULL
         classId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true }, //FOREIGN KEY (classID) REFERENCES classe(id) ON DELETE CASCADE,
         academicYear: { type: DataTypes.STRING(9), allowNull: true },
+        price: { type: DataTypes.DECIMAL(10, 2), allowNull: true },  
         status: {
             type: DataTypes.ENUM('open', 'closed', 'archived'),
             allowNull: false,
@@ -26,6 +30,10 @@ const Course = sequilize.define(
     },
     {
         tableName: 'courses',
+        // Cache namespace: course:*
+        cacheEntity: 'course',
+        // class:<id> lists its courses; enrollment reads embed the course.
+        cacheDependents: ['class', 'enrollment'],
         indexes: [
             { unique: true, fields: ['code'] },
             { fields: ['level'] },

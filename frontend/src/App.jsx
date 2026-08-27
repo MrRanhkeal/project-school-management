@@ -18,10 +18,12 @@ import Student from './pages/student/Student';
 import Teacher from './pages/teacher/Teacher';
 import Grade from './pages/grade/Grade';
 import Course from './pages/course/Course';
+import Enrollment from './pages/enrollment/Enrollment';
 import Attendance from './pages/attendance/Attendance';
 import Classroom from './pages/classroom/Classroom';
 import Payment from './pages/payment/Payment';
 import User from './pages/users/Users';
+import Department from './pages/departments/Department';
 
 /** Authenticated shell: fixed header, responsive sidebar, footer. */
 function AppLayout() {
@@ -106,6 +108,15 @@ export default function App() {
           />
           <Route path="/classes" element={<Classroom />} />
           <Route path="/courses" element={<Course />} />
+          <Route
+            path="/enrollments"
+            element={
+              // Students reach the same page, scoped to their own rows.
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.STAFF, ROLES.TEACHER]}>
+                <Enrollment />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/grades" element={<Grade />} />
           <Route path="/attendance" element={<Attendance />} />
           <Route
@@ -121,6 +132,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={[ROLES.ADMIN, ROLES.STAFF]}>
                 <User />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/departments"
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.STAFF]}>
+                <Department />
               </ProtectedRoute>
             }
           />

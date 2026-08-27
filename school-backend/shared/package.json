@@ -15,7 +15,7 @@
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.6.2",
     "mysql2": "^3.11.0",
-    "sequelize": "^6.37.3",
+    "sequelize": "^6.37.8",
     "winston": "^3.13.0",
     "zod": "^3.23.8"
   }

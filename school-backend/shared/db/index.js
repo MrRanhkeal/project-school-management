@@ -3,11 +3,20 @@ require('dotenv').config();
 const { Sequelize } = require('sequelize');
 const config = require('../config');
 const logger = require('../logger');
+const { attachCacheHooks } = require('../redis/autoInvalidate');
 
-
- //exhausting MySQL's max_connections at ~10k students of read/write load.
+/**
+ * One pooled Sequelize connection per service process, sized so five services
+ * cannot exhaust MySQL's max_connections at ~10k students of read/write load.
+ *
+ * Automatic cache invalidation is wired in HERE, on the connection, rather
+ * than per model. That is deliberate: a model added by a future feature is
+ * covered the moment it is defined, with no cache code of its own. Pass
+ * `{ cache: false }` to opt a connection out.
+ */
 function createSequelize(overrides = {}) {
-  const db = { ...config.db, ...overrides };
+  const { cache = true, ...dbOverrides } = overrides;
+  const db = { ...config.db, ...dbOverrides };
 
   const sequelize = new Sequelize(db.name, db.user, db.password, {
     host: db.host,
@@ -29,6 +38,8 @@ function createSequelize(overrides = {}) {
       charset: 'utf8mb4',
     },
   });
+
+  attachCacheHooks(sequelize, { enabled: cache });
 
   return sequelize;
 }

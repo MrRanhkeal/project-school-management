@@ -10,7 +10,7 @@ exports.list = asyncHandler(async (req, res) => {
         const { items, ...meta } = result;
         ok(res, items, meta);
     }catch(err){
-        logErr('academic.student',err,res);
+        logErr('academic.student.list', err, req);
         throw err;
     }
 });
@@ -19,7 +19,7 @@ exports.get = asyncHandler(async (req, res) => {
     try {
         ok(res, await service.getById(req.params.id));
     } catch (err) {
-        logErr('academic.student.get', err, res);
+        logErr('academic.student.get', err, req);
         throw err; // let errorHandler send the proper status
     }
 });

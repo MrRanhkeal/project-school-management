@@ -1,5 +1,6 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ACADEMIC_YEAR_RE = /^\d{4}-\d{4}$/;
 
 export const required =
   (msg = 'This field is required') =>
@@ -25,6 +26,12 @@ export const isDate =
   (msg = 'Use the YYYY-MM-DD format') =>
   (value) =>
     value && !DATE_RE.test(value) ? msg : '';
+
+/** Matches the backend's academicYear zod regex (e.g. 2025-2026). */
+export const isAcademicYear =
+  (msg = 'Use the YYYY-YYYY format') =>
+  (value) =>
+    value && !ACADEMIC_YEAR_RE.test(value) ? msg : '';
 
 export const isNumber =
   (msg = 'Must be a number') =>

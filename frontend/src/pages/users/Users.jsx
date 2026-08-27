@@ -1,7 +1,5 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-
 import CrudManager from '../../components/common/CrudManager';
 import { ENDPOINTS } from '../../services/endpoints';
 import { ROLES } from '../../utils/constants';
@@ -69,36 +67,6 @@ function Users() {
                 },
             ],
             required: true,
-            defaultValue: 'active',
-        },
-    ];
-    const columns = [
-        {
-            id: 'index',
-            label: '#',
-            render: (_row, _data, index) => index + 1,
-        },
-        {
-            id: 'fullName',
-            label: t('common.name', 'Name'),
-            render: (row) => row.fullName || fullName(row) || '-',
-        },
-        {
-            id: 'email',
-            label: t('common.email', 'Email'),
-            render: (row) => row.email || '-',
-        },
-        {
-            id: 'role',
-            label: t('common.role', 'Role'),
-            render: (row) =>
-                t(`roles.${row.role} `, row.role || '-'),
-        },
-        {
-            id: 'status',
-            label: t('common.status', 'Status'),
-            render: (row) =>
-                t(`status.${row.status} `, row.status || '-'),
         },
     ];
 
@@ -107,9 +75,32 @@ function Users() {
             title={t('users.title', 'Users')}
             endpoint={ENDPOINTS.auth}
             formFields={formFields}
-            columns={columns}
             writeRoles={[ROLES.ADMIN]}
             deleteRoles={[ROLES.ADMIN]}
+            columns={[
+                {
+                    id: 'index',
+                    label: '#',
+                    render: (_, __, index) => index + 1,
+                },
+                {
+                    id: 'fullName',
+                    label: t('common.name', 'Name'),
+                    render: (row) => row.fullName || fullName(row),
+                },
+                {
+                    id: 'email',
+                    label: t('common.email', 'Email'),
+                },
+                {
+                    id: 'role',
+                    label: t('common.role', 'Role'),
+                },
+                {
+                    id: 'status',
+                    label: t('common.status', 'Status'),
+                },
+            ]}
         />
     );
 }

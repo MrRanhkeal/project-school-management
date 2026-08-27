@@ -21,6 +21,12 @@ export default function useOptions(url, getLabel, params = { page: 1, limit: 100
   paramsRef.current = params;
 
   useEffect(() => {
+    // Callers pass a falsy url to opt out (e.g. a student who may not list
+    // other students); the field then just renders with no options.
+    if (!url) {
+      setOptions([]);
+      return undefined;
+    }
     let alive = true;
     api
       .get(url, { params: paramsRef.current })

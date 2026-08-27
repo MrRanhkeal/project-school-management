@@ -20,6 +20,9 @@ const Attendance = sequilize.define(
     },
     {
         tableName: 'attendance',
+        // Cache namespace: attendance:*  (nothing cached yet; anything added
+        // under this prefix is invalidated automatically).
+        cacheEntity: 'attendance',
         indexes: [
             { unique: true, fields: ['student_id', 'course_id', 'date'] },
             { fields: ['date'] },

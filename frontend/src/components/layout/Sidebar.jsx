@@ -18,6 +18,7 @@ import GroupsIcon from '@mui/icons-material/GroupsOutlined';
 import BadgeIcon from '@mui/icons-material/BadgeOutlined';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuBookIcon from '@mui/icons-material/MenuBookOutlined';
+import HowToRegIcon from '@mui/icons-material/HowToRegOutlined';
 import GradeIcon from '@mui/icons-material/GradeOutlined';
 import EventAvailableIcon from '@mui/icons-material/EventAvailableOutlined';
 import PaymentsIcon from '@mui/icons-material/PaymentsOutlined';
@@ -26,6 +27,7 @@ import { setSidebar } from '../../redux/actions';
 import useAuth from '../../hooks/useAuth';
 import { DRAWER_WIDTH, ROLES } from '../../utils/constants';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import PolylineIcon from '@mui/icons-material/Polyline';
 
 const NAV_ITEMS = [
   { key: 'dashboard', path: '/', icon: <DashboardIcon /> },
@@ -38,10 +40,17 @@ const NAV_ITEMS = [
   { key: 'teachers', path: '/teachers', icon: <BadgeIcon />, roles: [ROLES.ADMIN, ROLES.STAFF] },
   { key: 'classes', path: '/classes', icon: <MeetingRoomIcon /> },
   { key: 'courses', path: '/courses', icon: <MenuBookIcon /> },
+  {
+    key: 'enrollments',
+    path: '/enrollments',
+    icon: <HowToRegIcon />,
+    roles: [ROLES.ADMIN, ROLES.STAFF, ROLES.TEACHER],
+  },
   { key: 'grades', path: '/grades', icon: <GradeIcon /> },
   { key: 'attendance', path: '/attendance', icon: <EventAvailableIcon /> },
   { key: 'payments', path: '/payments', icon: <PaymentsIcon />, roles: [ROLES.ADMIN, ROLES.STAFF] },
   { key: 'users', path: '/users', icon: <PeopleAltIcon />, roles: [ROLES.ADMIN, ROLES.STAFF] },
+  { key: 'department', path: '/departments', icon: <PolylineIcon />, roles: [ROLES.ADMIN, ROLES.STAFF] },
   { key: 'profile', path: '/profile', icon: <PersonIcon /> },
 ];
 

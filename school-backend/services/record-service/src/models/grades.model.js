@@ -20,6 +20,9 @@ const Grade = sequilize.define(
     },
     {
         tableName: 'grades',
+        // Cache namespace: grade:*  — also covers the cached report cards
+        // stored under grade:report:<studentId>:<term>.
+        cacheEntity: 'grade',
         indexes: [
             { fields: ['student_id'] },
             { fields: ['course_id'] },

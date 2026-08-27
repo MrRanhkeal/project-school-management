@@ -54,6 +54,23 @@ export const ENDPOINTS = {
     delete: byId('/api/courses'),
   },
 
+  // Enrollments (student <-> course join, academic-service)
+  enrollments: {
+    list: '/api/enrollments',
+    create: '/api/enrollments',
+    detail: byId('/api/enrollments'),
+    update: byId('/api/enrollments'),
+    delete: byId('/api/enrollments'),
+
+    // custom
+    bulk: '/api/enrollments/bulk',
+
+    // self-service (role: student) — the API reads studentId from the token
+    mine: '/api/enrollments/me',
+    join: '/api/enrollments/join',
+    dropMine: byId('/api/enrollments/me'),
+  },
+
   // Grades
   grades: {
     list: '/api/grades',

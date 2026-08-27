@@ -1,13 +1,9 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { config, ApiError, redis } = require('@school/shared');
+const { ApiError, redis } = require('@school/shared');
 const { Teacher, SchoolClass, Course } = require('../models');
 const authClient = require('../clients/auth.client');
-
-const CACHE_TTL = config.redis.cacheTtl;
-const idKey = (id) => `teacher:${id}`;
-const LIST_TAG = 'teacher:list:*';
 
 /**
  * Ensure the teacher has an auth_db user and return its id.
@@ -31,7 +27,7 @@ async function withUsers(teachers) {
 }
 
 async function getById(id) {
-    const teacher = await redis.cacheWrap(idKey(id), CACHE_TTL, async () => {
+    const teacher = await redis.byId(Teacher, id, async () => {
         const row = await Teacher.findByPk(id, {
             include: [
                 {
@@ -65,8 +61,7 @@ async function list(query) {
             { teacherCode: { [Op.like]: `%${search}%` } },
         ];
     }
-    const cacheKey = `teacher:list:${JSON.stringify({ where, page, limit })}`;
-    const result = await redis.cacheWrap(cacheKey, 60, async () => {
+    const result = await redis.list(Teacher, { page, limit, department, status, search }, async () => {
         const { rows, count } = await Teacher.findAndCountAll({
             where,
             limit,
@@ -100,7 +95,6 @@ async function create(data) {
     delete data.password;
 
     const t = await Teacher.create(data);
-    await redis.invalidate(LIST_TAG);
     const json = t.toJSON();
     // tempPassword is only present when a brand-new account was created.
     if (authUser) json.user = authUser;
@@ -125,7 +119,6 @@ async function update(id, data) {
     delete data.password;
 
     await t.update(data);
-    await Promise.all([redis.invalidate(idKey(id)), redis.invalidate(LIST_TAG)]);
     const json = t.toJSON();
     if (authUser) json.user = authUser;
     return json;
@@ -135,7 +128,6 @@ async function remove(id) {
     const t = await Teacher.findByPk(id);
     if (!t) throw ApiError.notFound('Teacher not found');
     await t.destroy();
-    await Promise.all([redis.invalidate(idKey(id)), redis.invalidate(LIST_TAG)]);
 }
 
 module.exports = { getById, list, create, update, remove };

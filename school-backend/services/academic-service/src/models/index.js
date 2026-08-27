@@ -5,6 +5,7 @@ const Teacher = require('./teacher.model');
 const SchoolClass = require('./classe.model');
 const Student = require('./student.model');
 const Course = require('./course.model');
+const Enrollment = require('./enrollment.model');
 
 // ---------------------------------------------------------------------------
 // Associations (all FKs stay inside academic_db; userId refs to auth_db are
@@ -55,4 +56,45 @@ Course.belongsTo(SchoolClass, {
     foreignKey: 'classId',
 });
 
-module.exports = { sequelize, Teacher, SchoolClass, Student, Course };
+// ---------------------------------------------------------------------------
+// Enrollment: student <-> course join model (enrollments.student_id /
+// .course_id / .class_id). Declared as hasMany/belongsTo rather than
+// belongsToMany so the extra columns (status, finalGrade, dates) stay
+// first-class and Sequelize does not add its own unique key on
+// (student_id, course_id) — re-taking a course in another year is legal.
+// ---------------------------------------------------------------------------
+
+// A student has many enrollments (enrollments.student_id).
+Student.hasMany(Enrollment, {
+    as: 'enrollments',
+    foreignKey: 'studentId',
+    onDelete: 'CASCADE',
+});
+Enrollment.belongsTo(Student, {
+    as: 'student',
+    foreignKey: 'studentId',
+});
+
+// A course has many enrollments (enrollments.course_id).
+Course.hasMany(Enrollment, {
+    as: 'enrollments',
+    foreignKey: 'courseId',
+    onDelete: 'CASCADE',
+});
+Enrollment.belongsTo(Course, {
+    as: 'course',
+    foreignKey: 'courseId',
+});
+
+// The class the enrollment was taken under (enrollments.class_id).
+SchoolClass.hasMany(Enrollment, {
+    as: 'enrollments',
+    foreignKey: 'classId',
+    onDelete: 'SET NULL',
+});
+Enrollment.belongsTo(SchoolClass, {
+    as: 'class',
+    foreignKey: 'classId',
+});
+
+module.exports = { sequelize, Teacher, SchoolClass, Student, Course, Enrollment };

@@ -22,6 +22,10 @@ const Teachers = sequelize.define(
     },
     {
         tableName: 'teachers',
+        // Cache namespace: teacher:*  (model is named `Teachers`, keys are singular)
+        cacheEntity: 'teacher',
+        // class:<id> and course:<id> both embed the teacher's name.
+        cacheDependents: ['class', 'course'],
         indexes: [
             { unique: true, fields: ['teacher_code'] },
             { fields: ['department'] },

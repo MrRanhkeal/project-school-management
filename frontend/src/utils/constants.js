@@ -15,6 +15,28 @@ export const TEACHER_STATUSES = ['active', 'on_leave', 'retired'];
 export const CLASS_STATUSES = ['active', 'archived'];
 export const COURSE_STATUSES = ['open', 'closed', 'archived'];
 export const ATTENDANCE_STATUSES = ['present', 'absent', 'late', 'excused'];
+export const ENROLLMENT_STATUSES = ['pending', 'active', 'completed', 'dropped'];
+export const ENROLLMENT_TERMS = [
+  'term1',
+  'term2',
+  'term3',
+  'semester1',
+  'semester2',
+  'full_year',
+];
+
+// Same values, with readable labels for selects and table cells.
+export const ENROLLMENT_TERM_OPTIONS = [
+  { value: 'term1', label: 'Term 1' },
+  { value: 'term2', label: 'Term 2' },
+  { value: 'term3', label: 'Term 3' },
+  { value: 'semester1', label: 'Semester 1' },
+  { value: 'semester2', label: 'Semester 2' },
+  { value: 'full_year', label: 'Full year' },
+];
+
+export const termLabel = (value) =>
+  ENROLLMENT_TERM_OPTIONS.find((o) => o.value === value)?.label || value || '—';
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'sf_access_token',

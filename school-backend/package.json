@@ -2,18 +2,28 @@
   "name": "school-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "School management system: four Node.js microservices behind an **nginx API gateway**, sharing a common library (`shared/`), backed by MySQL (one database per service), Redis (refresh tokens + access-token blacklist), and JWT auth — all orchestrated with docker-compose.",
+  "description": "School management system: five Node.js microservices behind an **nginx API gateway**, sharing a common library (`shared/`), backed by MySQL (one database per service), Redis (cache + refresh tokens + BullMQ), and JWT auth — all orchestrated with docker-compose.",
   "license": "ISC",
   "author": "",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "up": "docker compose up -d --build",
+    "up": "npm run gateway:build && docker compose up -d --build",
     "down": "docker compose down",
     "down:clean": "docker compose down -v",
     "logs": "docker compose logs -f",
     "ps": "docker compose ps",
     "restart": "docker compose restart",
-    "rebuild": "docker compose build --no-cache"
+    "rebuild": "docker compose build --no-cache",
+
+    "gateway:build": "node gateway/generate.js",
+    "gateway:check": "node gateway/generate.js --check",
+    "gateway:test": "npm run gateway:build && docker compose exec -T nginx nginx -t",
+    "gateway:reload": "npm run gateway:build && docker compose exec -T nginx nginx -s reload",
+
+    "cache:map": "node scripts/cache-map.js",
+    "cache:selftest": "node scripts/cache-selftest.js",
+
+    "verify": "npm run gateway:check && npm run cache:map && npm run cache:selftest"
   }
 }

@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { config, ApiError, redis } = require('@school/shared');
+const { ApiError, redis } = require('@school/shared');
 const { Course, Teacher, SchoolClass } = require('../models');
 
 const courseIncludes = [
@@ -17,12 +17,8 @@ const courseIncludes = [
     },
 ];
 
-const CACHE_TTL = config.redis.cacheTtl;
-const idKey = (id) => `course:${id}`;
-const LIST_TAG = 'course:list:*';
-
 async function getById(id) {
-    const row = await redis.cacheWrap(idKey(id), CACHE_TTL, async () => {
+    const row = await redis.byId(Course, id, async () => {
         const r = await Course.findByPk(id, { include: courseIncludes });
         return r ? r.toJSON() : null;
     });
@@ -31,20 +27,45 @@ async function getById(id) {
 }
 
 async function list(query) {
-    const { page = 1, limit = 20, level, teacherId, classId, status, search } = query;
+    const {
+        page = 1,
+        limit = 20,
+        level,
+        teacherId,
+        classId,
+        status,
+        search,
+        price,
+        minPrice,
+        maxPrice,
+    } = query;
     const where = {};
     if (level) where.level = level;
     if (teacherId) where.teacherId = teacherId;
     if (classId) where.classId = classId;
     if (status) where.status = status;
+    // `price` is an exact match; minPrice/maxPrice are an inclusive range.
+    // 0 is a legal price, so test against null rather than falsiness.
+    if (price != null) {
+        where.price = price;
+    } else if (minPrice != null || maxPrice != null) {
+        where.price = {
+            ...(minPrice != null && { [Op.gte]: minPrice }),
+            ...(maxPrice != null && { [Op.lte]: maxPrice }),
+        };
+    }
     if (search) {
         where[Op.or] = [
             { title: { [Op.like]: `%${search}%` } },
             { code: { [Op.like]: `%${search}%` } },
         ];
     }
-    const cacheKey = `course:list:${JSON.stringify({ where, page, limit })}`;
-    return redis.cacheWrap(cacheKey, 60, async () => {
+    // Every filter that changes the result set must be in the cache key, or
+    // one price range's page is served to the next.
+    const cacheParams = {
+        page, limit, level, teacherId, classId, status, search, price, minPrice, maxPrice,
+    };
+    return redis.list(Course, cacheParams, async () => {
         const { rows, count } = await Course.findAndCountAll({
             where,
             limit,
@@ -79,7 +100,6 @@ async function create(data) {
     if (exists) throw ApiError.conflict('Course code already exists');
     await assertRelationsExist(data);
     const c = await Course.create(data);
-    await redis.invalidate(LIST_TAG);
     return c.toJSON();
 }
 
@@ -88,7 +108,6 @@ async function update(id, data) {
     if (!c) throw ApiError.notFound('Course not found');
     await assertRelationsExist(data);
     await c.update(data);
-    await Promise.all([redis.invalidate(idKey(id)), redis.invalidate(LIST_TAG)]);
     return c.toJSON();
 }
 
@@ -96,7 +115,7 @@ async function remove(id) {
     const c = await Course.findByPk(id);
     if (!c) throw ApiError.notFound('Course not found');
     await c.destroy();
-    await Promise.all([redis.invalidate(idKey(id)), redis.invalidate(LIST_TAG)]);
 }
 
 module.exports = { getById, list, create, update, remove };
+

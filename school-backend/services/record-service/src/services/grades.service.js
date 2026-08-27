@@ -1,10 +1,8 @@
 'use strict';
 
-const { config, ApiError, redis } = require('@school/shared');
+const { ApiError, redis } = require('@school/shared');
 const Grade = require('../models/grades.model');
 const academic = require('../clients/academic.client');
-
-const reportKey = (studentId, term) => `grade:report:${studentId}:${term || 'all'}`;
 
 /** FK-style check against academic_db for whichever refs the payload carries. */
 async function verifyGradeRefs(data) {
@@ -53,7 +51,6 @@ async function list(query) {
 async function create(data) {
     await verifyGradeRefs(data);
     const grade = await Grade.create(data);
-    await redis.invalidate(reportKey(data.studentId, '*'));
     return grade.toJSON();
 }
 
@@ -62,16 +59,13 @@ async function update(id, data) {
     if (!grade) throw ApiError.notFound('Grade not found');
     await verifyGradeRefs(data);
     await grade.update(data);
-    await redis.invalidate(reportKey(grade.studentId, '*'));
     return grade.toJSON();
 }
 
 async function remove(id) {
     const grade = await Grade.findByPk(id);
     if (!grade) throw ApiError.notFound('Grade not found');
-    const studentId = grade.studentId;
     await grade.destroy();
-    await redis.invalidate(reportKey(studentId, '*'));
 }
 
 /**
@@ -80,7 +74,7 @@ async function remove(id) {
  * than grades change.
  */
 async function studentReport(studentId, term) {
-    return redis.cacheWrap(reportKey(studentId, term), config.redis.cacheTtl, async () => {
+    return redis.derived(Grade, 'report', [studentId, term], async () => {
         const where = { studentId };
         if (term) where.term = term;
         const grades = await Grade.findAll({ where, raw: true });

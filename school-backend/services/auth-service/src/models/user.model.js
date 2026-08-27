@@ -33,6 +33,9 @@ const User = sequelize.define(
     },
     {
         tableName: 'users',
+        // Cache namespace: user:*  — refresh:<userId>:<jti> session keys live
+        // outside it on purpose, so a profile write never logs anyone out.
+        cacheEntity: 'user',
         indexes: [
             { unique: true, fields: ['email'] },
             { fields: ['role'] },

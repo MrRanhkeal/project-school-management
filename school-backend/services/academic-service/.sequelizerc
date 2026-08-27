@@ -1,0 +1,14 @@
+'use strict';
+
+// sequelize-cli looks for `config/config.json`, `migrations/`, `models/` and
+// `seeders/` at the package root by default. This service keeps all of that
+// under `src/`, so without this file every `db:*` script silently operates on
+// an empty, non-existent migration set.
+const path = require('path');
+
+module.exports = {
+    config: path.resolve('src', 'config', 'config.js'),
+    'models-path': path.resolve('src', 'models'),
+    'migrations-path': path.resolve('src', 'migrations'),
+    'seeders-path': path.resolve('src', 'seeders'),
+};

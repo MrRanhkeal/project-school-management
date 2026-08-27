@@ -2,7 +2,7 @@
 const { db } = require('@school/shared')
 
 
-const sequilize =db.createSequelize({
+const sequelize =db.createSequelize({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5307,
     name: process.env.DB_NAME || 'academic_db',
@@ -10,4 +10,4 @@ const sequilize =db.createSequelize({
     password: process.env.DB_PASSWORD || 'academicpass'
 })
 
-module.exports = sequilize;
+module.exports = sequelize;

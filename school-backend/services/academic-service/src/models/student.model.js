@@ -30,6 +30,11 @@ const Students = sequelize.define(
     },
     {
         tableName: 'students',
+        // Cache namespace: student:*  (see shared/redis/autoInvalidate.js)
+        cacheEntity: 'student',
+        // class:<id> embeds its student roster, and enrollment reads embed the
+        // student, so a student write must clear those namespaces too.
+        cacheDependents: ['class', 'enrollment'],
         indexes: [
             { unique: true, fields: ['student_code'] },
             { fields: ['level'] },

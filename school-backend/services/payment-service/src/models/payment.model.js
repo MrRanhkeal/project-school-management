@@ -61,6 +61,9 @@ const Payment = sequelize.define(
     },
     {
         tableName: 'payments',
+        // Cache namespace: payment:*  (nothing cached yet; anything added
+        // under this prefix is invalidated automatically).
+        cacheEntity: 'payment',
         indexes: [
             { fields: ['status'] },
             { fields: ['payment_id'], unique: true },
