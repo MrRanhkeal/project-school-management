@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: 5173,
+      port: 86,
       proxy: {
         '/api': { 
           target: env.VITE_PROXY_TARGET || 'http://localhost:8080',
